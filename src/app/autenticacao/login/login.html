@@ -1,0 +1,40 @@
+<div class="login-wrapper">
+  <div class="branding-section">
+    <div class="branding-content">
+      <h1>Seja Bem-Vindo</h1>
+      <p>Gerencie suas tarefas e projetos de forma simples e eficiente.</p>
+    </div>
+  </div>
+
+  <div class="form-section">
+    <div class="form-container">
+      <h2>Acesse sua Conta</h2>
+      <p class="subtitle">Insira suas credenciais para continuar.</p>
+
+      <form [formGroup]="loginForm" (ngSubmit)="onSubmit()">
+        <mat-form-field appearance="outline">
+          <mat-label>Login</mat-label>
+          <input matInput formControlName="login" autocomplete="username">
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Senha</mat-label>
+          <input matInput formControlName="password" [type]="hidePassword ? 'password' : 'text'" autocomplete="current-password">
+          <button mat-icon-button matSuffix (click)="togglePasswordVisibility()" type="button">
+            <mat-icon>{{hidePassword ? 'visibility_off' : 'visibility'}}</mat-icon>
+          </button>
+        </mat-form-field>
+
+        <button mat-raised-button color="primary" type="submit" [disabled]="loginForm.invalid">
+          ENTRAR
+        </button>
+      </form>
+
+      <div class="actions">
+        <span>Não tem uma conta?</span>
+        <a routerLink="/cadastro">Cadastre-se</a>
+      </div>
+      
+    </div>
+  </div>
+</div>

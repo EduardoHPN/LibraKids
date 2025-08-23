@@ -1,0 +1,42 @@
+<div class="login-wrapper">
+  <div class="branding-section">
+    <div class="branding-content">
+      <h1>Crie sua Conta</h1>
+      <p>Rápido e fácil. Comece a usar nossa plataforma hoje mesmo.</p>
+    </div>
+  </div>
+
+  <div class="form-section">
+    <div class="form-container">
+      <h2>Registro de Novo Usuário</h2>
+      <p class="subtitle">Preencha os dados abaixo.</p>
+
+      <form [formGroup]="cadastroForm" (ngSubmit)="onSubmit()">
+        <mat-form-field appearance="outline">
+          <mat-label>Nome Completo</mat-label>
+          <input matInput formControlName="nome">
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Email</mat-label>
+          <input matInput formControlName="email" type="email">
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Senha</mat-label>
+          <input matInput formControlName="senha" [type]="hidePassword ? 'password' : 'text'">
+           <button mat-icon-button matSuffix (click)="togglePasswordVisibility()" type="button">
+            <mat-icon>{{hidePassword ? 'visibility_off' : 'visibility'}}</mat-icon>
+          </button>
+        </mat-form-field>
+
+        <button mat-raised-button color="primary" type="submit" [disabled]="cadastroForm.invalid">
+          CADASTRAR
+        </button>
+      </form>
+
+      <div class="actions">
+        <span>Já tem uma conta?</span>
+        <a routerLink="/login">Faça o login</a>
+      </div>
+    </div>
+  </div>
+</div>

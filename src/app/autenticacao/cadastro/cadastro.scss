@@ -1,0 +1,100 @@
+:host {
+  font-family: 'Roboto', sans-serif;
+}
+
+.login-wrapper {
+  display: flex;
+  height: 100vh;
+  width: 100%;
+}
+
+/* Coluna da Esquerda (Branding) */
+.branding-section {
+  flex: 1;
+  background-color: #1A237E; /* Azul Índigo Sóbrio */
+  color: white;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 40px;
+}
+
+.branding-content {
+  text-align: center;
+}
+
+.branding-content h1 {
+  font-size: 3rem;
+  font-weight: 500;
+  margin-bottom: 16px;
+}
+
+.branding-content p {
+  font-size: 1.1rem;
+  font-weight: 300;
+  max-width: 400px;
+  line-height: 1.6;
+}
+
+/* Coluna da Direita (Formulário) */
+.form-section {
+  flex: 1;
+  background-color: #FFFFFF;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 40px;
+}
+
+.form-container {
+  max-width: 400px;
+  width: 100%;
+}
+
+.form-container h2 {
+  font-size: 2rem;
+  font-weight: 500;
+  color: #333;
+  margin-bottom: 8px;
+}
+
+.form-container .subtitle {
+  font-size: 1rem;
+  color: #757575;
+  margin-bottom: 30px;
+}
+
+form {
+  display: flex;
+  flex-direction: column;
+  gap: 15px; /* Espaçamento entre os campos */
+}
+
+button[mat-raised-button] {
+  padding: 16px 0;
+  font-size: 1rem;
+  margin-top: 10px;
+}
+
+.actions {
+  text-align: center;
+  margin-top: 30px;
+  color: #757575;
+}
+
+.actions a {
+  text-decoration: none;
+  font-weight: 500;
+  color: #2196F3; /* Azul padrão para links */
+}
+
+/* --- Responsividade para Celulares --- */
+@media (max-width: 800px) {
+  .branding-section {
+    display: none; /* Esconde a coluna de branding em telas pequenas */
+  }
+
+  .form-section {
+    flex: 2; /* Faz o formulário ocupar toda a tela */
+  }
+}

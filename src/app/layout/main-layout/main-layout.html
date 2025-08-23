@@ -1,0 +1,41 @@
+<mat-sidenav-container class="sidenav-container">
+  <mat-sidenav #drawer class="sidenav" [class.collapsed]="!isExpanded"
+      mode="side"
+      opened>
+
+    <div class="sidenav-header">
+      <mat-icon class="logo-icon">sign_language</mat-icon>
+      <h3 *ngIf="isExpanded">Libras Fácil</h3>
+    </div>
+
+    <mat-nav-list>
+      <a mat-list-item routerLink="/app/trilha" routerLinkActive="active-link" matTooltip="Trilha de Aprendizado" [matTooltipDisabled]="isExpanded">
+        <mat-icon matListItemIcon>school</mat-icon>
+        <span *ngIf="isExpanded" matListItemTitle>Trilha de Aprendizado</span>
+      </a>
+      <a mat-list-item routerLink="/app/dicionario" routerLinkActive="active-link" matTooltip="Dicionário de Sinais" [matTooltipDisabled]="isExpanded">
+        <mat-icon matListItemIcon>menu_book</mat-icon>
+        <span *ngIf="isExpanded" matListItemTitle>Dicionário de Sinais</span>
+      </a>
+      <a mat-list-item routerLink="/app/perfil" routerLinkActive="active-link" matTooltip="Meu Perfil" [matTooltipDisabled]="isExpanded">
+        <mat-icon matListItemIcon>person</mat-icon>
+        <span *ngIf="isExpanded" matListItemTitle>Meu Perfil</span>
+      </a>
+      <a mat-list-item routerLink="/login" matTooltip="Sair" [matTooltipDisabled]="isExpanded">
+        <mat-icon matListItemIcon>logout</mat-icon>
+        <span *ngIf="isExpanded" matListItemTitle>Sair</span>
+      </a>
+    </mat-nav-list>
+
+    <div class="sidenav-footer">
+       <a mat-list-item (click)="toggleMenu()">
+          <mat-icon matListItemIcon>{{ isExpanded ? 'menu_open' : 'menu' }}</mat-icon>
+          <span *ngIf="isExpanded" matListItemTitle>Fechar Menu</span>
+       </a>
+    </div>
+  </mat-sidenav>
+
+  <mat-sidenav-content>
+      <router-outlet></router-outlet>
+  </mat-sidenav-content>
+</mat-sidenav-container>

@@ -1,0 +1,12 @@
+/* Importa o tema pré-construído do Angular Material. ESSA É A LINHA MAIS IMPORTANTE. */
+@import '@angular/material/prebuilt-themes/indigo-pink.css';
+
+/* Estilos globais para garantir que o layout funcione corretamente */
+html, body {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: Roboto, "Helvetica Neue", sans-serif;
+}
