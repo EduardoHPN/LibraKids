@@ -1,0 +1,31 @@
+<h2 mat-dialog-title>Editar Perfil</h2>
+
+<form [formGroup]="editForm" (ngSubmit)="onSave()">
+  <mat-dialog-content>
+    <p>Altere as informações do seu perfil abaixo.</p>
+    
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Nome Completo</mat-label>
+      <input matInput formControlName="name" required cdkFocusInitial>
+      <mat-error *ngIf="editForm.get('name')?.hasError('required')">
+        O nome é obrigatório.
+      </mat-error>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Email</mat-label>
+      <input matInput formControlName="email" required>
+      <mat-error *ngIf="editForm.get('email')?.hasError('required')">
+        O email é obrigatório.
+      </mat-error>
+      <mat-error *ngIf="editForm.get('email')?.hasError('email')">
+        Por favor, insira um email válido.
+      </mat-error>
+    </mat-form-field>
+  </mat-dialog-content>
+
+  <mat-dialog-actions align="end">
+    <button mat-button type="button" (click)="onCancel()">Cancelar</button>
+    <button mat-flat-button color="primary" type="submit" [disabled]="!editForm.valid">Salvar Alterações</button>
+  </mat-dialog-actions>
+</form>

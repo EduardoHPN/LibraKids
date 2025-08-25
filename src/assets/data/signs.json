@@ -1,0 +1,10 @@
+[
+  { "letter": "A", "description": "Mão fechada com o polegar estendido para o lado.", "imageUrl": "assets/images/signs/letra-a.png" },
+  { "letter": "B", "description": "Mão aberta com os dedos unidos e polegar dobrado para a palma.", "imageUrl": "assets/images/signs/letra-b.png" },
+  { "letter": "C", "description": "Mão curvada em formato de 'C'.", "imageUrl": "assets/images/signs/letra-c.png" },
+  { "letter": "D", "description": "Dedo indicador para cima e os outros formando um círculo.", "imageUrl": "assets/images/signs/letra-d.png" },
+  { "letter": "E", "description": "Mão fechada com as unhas dos dedos visíveis.", "imageUrl": "assets/images/signs/letra-e.png" },
+  { "letter": "F", "description": "Indicador e polegar se tocando, outros dedos estendidos.", "imageUrl": "assets/images/signs/letra-f.png" },
+  { "letter": "G", "description": "Mão fechada com o dedo indicador estendido para o lado.", "imageUrl": "assets/images/signs/letra-g.png" },
+  { "letter": "H", "description": "Dedos indicador e médio estendidos e unidos, girando o pulso.", "imageUrl": "assets/images/signs/letra-h.png" }
+]

@@ -1,0 +1,54 @@
+<div class="dictionary-container">
+  <div class="header">
+    <h1>Dicionário de Sinais</h1>
+    <p>Busque pela letra desejada para ver os sinais.</p>
+  </div>
+
+  <div class="search-bar-wrapper">
+    <mat-form-field appearance="outline" class="search-bar">
+      <mat-icon matPrefix>search</mat-icon>
+      <mat-label>Buscar por letra...</mat-label>
+      <input
+        matInput
+        type="text"
+        maxlength="1"
+        #searchInput
+        (input)="onSearchChange(searchInput.value)"
+        autocomplete="off">
+    </mat-form-field>
+  </div>
+
+  <div class="content-area" *ngIf="(groupedSigns$ | async) as groupedSigns">
+    <mat-accordion multi="true">
+      <mat-expansion-panel *ngFor="let group of groupedSigns | keyvalue: originalOrder">
+        <mat-expansion-panel-header>
+          <mat-panel-title class="panel-title">
+            Letra {{ group.key }}
+          </mat-panel-title>
+          <mat-panel-description class="panel-description">
+            {{ group.value.length }} sinal encontrado
+          </mat-panel-description>
+        </mat-expansion-panel-header>
+
+        <div class="panel-content">
+          <div class="signs-grid">
+            <div *ngFor="let sign of group.value" class="sign-card">
+              <div class="sign-image-wrapper">
+                <img [src]="sign.imageUrl" [alt]="'Sinal da letra ' + sign.letter">
+              </div>
+              <div class="sign-card-content">
+                <p class="sign-description">{{ sign.description }}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </mat-expansion-panel>
+    </mat-accordion>
+  </div>
+
+  <div *ngIf="(resultsCount$ | async) === 0" class="no-results">
+    <mat-icon>search_off</mat-icon>
+    <h2>Nenhuma letra encontrada</h2>
+    <p>Verifique a letra digitada.</p>
+  </div>
+</div>

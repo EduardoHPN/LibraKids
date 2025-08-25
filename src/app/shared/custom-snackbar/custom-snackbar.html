@@ -1,0 +1,7 @@
+<div class="minimal-toast" [ngClass]="data.type">
+  <mat-icon class="toast-icon">{{ icon }}</mat-icon>
+  <span class="toast-message">{{ data.message }}</span>
+  <button mat-icon-button (click)="close()" class="close-button">
+    <mat-icon>close</mat-icon>
+  </button>
+</div>

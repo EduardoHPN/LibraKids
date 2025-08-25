@@ -1,0 +1,34 @@
+<div class="collector-container">
+  <h1>Ferramenta de Coleta de Sinais</h1>
+  <p class="subtitle">{{ statusMessage }}</p>
+  
+  <div class="main-content">
+    <div class="video-wrapper">
+      <video #videoElement autoplay playsinline muted></video>
+    </div>
+    
+    <div class="controls">
+      <h2>Controles</h2>
+      <mat-form-field appearance="outline">
+        <mat-label>Letra para Capturar</mat-label>
+        <mat-select [(ngModel)]="selectedLetter">
+          <mat-option *ngFor="let letter of alphabet" [value]="letter">
+            Letra {{ letter }} ({{ getSampleCount(letter) }} amostras)
+          </mat-option>
+        </mat-select>
+      </mat-form-field>
+
+      <button mat-raised-button color="primary" (click)="captureSample()">
+        <mat-icon>camera</mat-icon>
+        Capturar Amostra
+      </button>
+
+      <p class="help-text">Dica: Capture pelo menos 20-30 amostras por letra, variando o ângulo e a iluminação.</p>
+
+      <button mat-stroked-button color="accent" (click)="downloadData()" [disabled]="!isDataCaptured()">
+        <mat-icon>download</mat-icon>
+        Baixar Dados (.json)
+      </button>
+    </div>
+  </div>
+</div>

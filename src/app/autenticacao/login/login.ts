@@ -1,27 +1,19 @@
 import { Component, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { CommonModule } from '@angular/common';
-
-import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
+import {  MatSnackBarModule } from '@angular/material/snack-bar';
+import { AuthService } from '../../services/auth.service';
+import { NotificationService } from '../../services/notification.service';
 
 @Component({
   selector: 'app-login',
   standalone: true,
-  imports: [
-    CommonModule,
-    ReactiveFormsModule,
-    RouterLink,
-    MatCardModule,
-    MatFormFieldModule,
-    MatInputModule,
-    MatButtonModule,
-    MatIconModule
-  ],
+  imports: [CommonModule, ReactiveFormsModule, RouterLink, MatFormFieldModule, MatInputModule, MatButtonModule, MatIconModule, MatSnackBarModule],
   templateUrl: './login.html',
   styleUrls: ['./login.scss']
 })
@@ -29,12 +21,16 @@ export class Login implements OnInit {
   loginForm!: FormGroup;
   hidePassword = true;
 
-  constructor(private fb: FormBuilder) {}
+  constructor(
+    private fb: FormBuilder,
+    private router: Router,
+    private authService: AuthService,
+    private notificationService: NotificationService
+  ) { }
 
   ngOnInit(): void {
     this.loginForm = this.fb.group({
-      // Campo de login genérico, apenas obrigatório
-      login: ['', [Validators.required]],
+      email: ['', [Validators.required, Validators.email]],
       password: ['', [Validators.required]]
     });
   }
@@ -45,8 +41,15 @@ export class Login implements OnInit {
 
   onSubmit(): void {
     if (this.loginForm.valid) {
-      console.log('Dados do formulário:', this.loginForm.value);
-      // Aqui viria a lógica para autenticar o usuário
+      this.authService.login(this.loginForm.value).subscribe({
+        next: () => {
+          this.notificationService.showSuccess('Login bem-sucedido!');
+          this.router.navigate(['/app/trilha']);
+        },
+        error: (err) => {
+          this.notificationService.showError(err.error.message || 'Email ou senha inválidos.');
+        }
+      });
     }
   }
 }

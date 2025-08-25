@@ -1,11 +1,14 @@
 <div class="login-wrapper">
+  <!-- Coluna da Esquerda: Mensagem de Boas-vindas -->
   <div class="branding-section">
     <div class="branding-content">
-      <h1>Seja Bem-Vindo</h1>
-      <p>Gerencie suas tarefas e projetos de forma simples e eficiente.</p>
+      <mat-icon class="brand-icon">sign_language</mat-icon>
+      <h1>Bem-vindo(a) de Volta!</h1>
+      <p>Continue sua jornada de aprendizado e conecte-se com a comunidade da Língua Brasileira de Sinais.</p>
     </div>
   </div>
 
+  <!-- Coluna da Direita: Formulário de Login -->
   <div class="form-section">
     <div class="form-container">
       <h2>Acesse sua Conta</h2>
@@ -13,16 +16,25 @@
 
       <form [formGroup]="loginForm" (ngSubmit)="onSubmit()">
         <mat-form-field appearance="outline">
-          <mat-label>Login</mat-label>
-          <input matInput formControlName="login" autocomplete="username">
+          <mat-label>Email</mat-label>
+          <input matInput formControlName="email" type="email" required autocomplete="username">
+          <mat-error *ngIf="loginForm.get('email')?.hasError('required')">
+            O email é obrigatório.
+          </mat-error>
+          <mat-error *ngIf="loginForm.get('email')?.hasError('email')">
+            Por favor, insira um email válido.
+          </mat-error>
         </mat-form-field>
 
         <mat-form-field appearance="outline">
           <mat-label>Senha</mat-label>
-          <input matInput formControlName="password" [type]="hidePassword ? 'password' : 'text'" autocomplete="current-password">
-          <button mat-icon-button matSuffix (click)="togglePasswordVisibility()" type="button">
+          <input matInput formControlName="password" [type]="hidePassword ? 'password' : 'text'" required autocomplete="current-password">
+          <button mat-icon-button matSuffix (click)="togglePasswordVisibility()" type="button" aria-label="Mostrar/Esconder senha">
             <mat-icon>{{hidePassword ? 'visibility_off' : 'visibility'}}</mat-icon>
           </button>
+           <mat-error *ngIf="loginForm.get('password')?.hasError('required')">
+            A senha é obrigatória.
+          </mat-error>
         </mat-form-field>
 
         <button mat-raised-button color="primary" type="submit" [disabled]="loginForm.invalid">
@@ -31,10 +43,9 @@
       </form>
 
       <div class="actions">
-        <span>Não tem uma conta?</span>
-        <a routerLink="/cadastro">Cadastre-se</a>
+        <span>Ainda não tem uma conta?</span>
+        <a routerLink="/cadastro">Crie uma agora</a>
       </div>
-      
     </div>
   </div>
 </div>
