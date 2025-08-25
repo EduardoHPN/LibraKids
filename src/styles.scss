@@ -10,3 +10,9 @@ body {
   margin: 0;
   font-family: Roboto, "Helvetica Neue", sans-serif;
 }
+
+.custom-snackbar-panel .mdc-snackbar__surface {
+  background-color: transparent !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+}

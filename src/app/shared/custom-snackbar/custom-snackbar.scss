@@ -1,0 +1,56 @@
+:host {
+  // Cores vibrantes e modernas para os ícones
+  --success-color: #10B981; // Verde Esmeralda
+  --error-color: #EF4444;   // Vermelho
+  --text-color: #374151;   // Cinza escuro
+  --close-button-color: #9CA3AF; // Cinza médio
+  --background-color: #ffffff; // Fundo branco
+}
+
+.minimal-toast {
+  // ESTA É A PARTE MAIS IMPORTANTE PARA O ALINHAMENTO
+  display: flex;
+  align-items: center; // Alinha todos os itens verticalmente ao centro
+  gap: 12px;
+
+  padding: 12px 16px;
+  border-radius: 8px;
+  background-color: var(--background-color);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+  border: 1px solid #E5E7EB;
+  min-width: 300px;
+  max-width: 350px;
+}
+
+.toast-icon {
+  font-size: 24px;
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0; // Impede que o ícone seja esmagado
+}
+
+.minimal-toast.success .toast-icon {
+  color: var(--success-color);
+}
+
+.minimal-toast.error .toast-icon {
+  color: var(--error-color);
+}
+
+.toast-message {
+  flex-grow: 1; // Faz a mensagem ocupar o espaço restante
+  font-weight: 500;
+  font-size: 0.95rem;
+  color: var(--text-color);
+  line-height: 1.4;
+}
+
+.close-button {
+  color: var(--close-button-color);
+ 
+  
+
+  mat-icon {
+    font-size: 20px;
+  }
+}

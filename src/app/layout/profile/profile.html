@@ -1,0 +1,20 @@
+<div class="profile-container" *ngIf="{ user: (user$ | async), stats: (stats$ | async) } as data">
+  <div class="header"><h1>Meu Perfil</h1></div>
+  <div class="profile-grid" *ngIf="data.user && data.stats">
+    <mat-card class="user-card">
+      <div class="avatar-wrapper"><img [src]="data.user.profileImageUrl" [alt]="data.user.name"></div>
+      <h2>{{ data.user.name }}</h2>
+      <p class="user-email">{{ data.user.email }}</p>
+      <mat-divider></mat-divider>
+      <mat-list><mat-list-item><mat-icon matListItemIcon>calendar_today</mat-icon><div matListItemTitle>Membro desde</div><div matListItemLine>{{ data.user.joinDate | date:'dd/MM/yyyy' }}</div></mat-list-item></mat-list>
+      <mat-card-actions><button mat-flat-button color="primary" (click)="editProfile(data.user)"><mat-icon>edit</mat-icon><span>Editar</span></button></mat-card-actions>
+    </mat-card>
+    <mat-card class="stats-card">
+      <mat-card-header><mat-card-title>Minhas Estatísticas</mat-card-title></mat-card-header>
+      <mat-card-content>
+        <div class="stat-item"><mat-icon class="stat-icon" color="primary">school</mat-icon><div class="stat-info"><span class="stat-value">{{ data.stats.modulesCompleted }} de {{ data.stats.totalModules }}</span><span class="stat-label">Módulos Concluídos</span></div></div>
+        <div class="stat-item"><mat-icon class="stat-icon" color="accent">sign_language</mat-icon><div class="stat-info"><span class="stat-value">{{ data.stats.signsLearned }} de {{ data.stats.totalSigns }}</span><span class="stat-label">Sinais Aprendidos</span></div></div>
+      </mat-card-content>
+    </mat-card>
+  </div>
+</div>

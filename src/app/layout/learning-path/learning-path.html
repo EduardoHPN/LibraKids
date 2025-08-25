@@ -1,0 +1,29 @@
+<div class="path-container">
+  <div class="header">
+    <h1>Trilha de Aprendizado</h1>
+    <p>Escolha um módulo abaixo para começar a sua jornada.</p>
+  </div>
+
+  <div class="modules-grid">
+    <mat-card *ngFor="let module of learningPath" class="module-card">
+      <div class="module-icon-wrapper">
+        <mat-icon>{{ module.lesson.icon }}</mat-icon>
+      </div>
+
+      <mat-card-header>
+        <mat-card-title>{{ module.title }}</mat-card-title>
+      </mat-card-header>
+      
+      <mat-card-content class="module-content">
+        <p>{{ module.description }}</p>
+      </mat-card-content>
+      
+      <mat-card-actions>
+        <button mat-flat-button color="primary" (click)="selectLesson(module.lesson.route)">
+          <span>{{ module.lesson.title }}</span>
+          <mat-icon>arrow_forward</mat-icon>
+        </button>
+      </mat-card-actions>
+    </mat-card>
+  </div>
+</div>
