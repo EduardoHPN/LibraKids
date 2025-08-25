@@ -1,0 +1,9 @@
+# Ignorar ambientes virtuais
+venv*/
+*/venv*/
+backend/venv_novo/
+
+# Ignorar modelos pesados
+*.pkl
+*.pyd
+*.dll
