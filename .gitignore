@@ -7,3 +7,4 @@ backend/venv_novo/
 *.pkl
 *.pyd
 *.dll
+backend/ml_model/
