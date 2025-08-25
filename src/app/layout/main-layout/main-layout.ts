@@ -21,9 +21,12 @@ import { MatTooltipModule } from '@angular/material/tooltip';
   styleUrls: ['./main-layout.scss']
 })
 export class MainLayoutComponent {
+  // A única lógica necessária é para expandir/recolher o menu.
   isExpanded = true;
 
-  constructor() {} 
+  constructor() {} // O construtor agora fica vazio.
 
-  
+  toggleMenu(): void {
+    this.isExpanded = !this.isExpanded;
+  }
 }

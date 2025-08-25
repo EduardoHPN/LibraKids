@@ -1,61 +1,41 @@
-<div class="register-wrapper">
-  <!-- Coluna da Esquerda: Mensagem de Boas-vindas -->
+<div class="login-wrapper">
   <div class="branding-section">
     <div class="branding-content">
-      <mat-icon class="brand-icon">sign_language</mat-icon>
-      <h1>Junte-se à Comunidade</h1>
-      <p>Crie sua conta e comece sua jornada de aprendizado na Língua Brasileira de Sinais. Conecte-se, aprenda e comunique-se.</p>
+      <h1>Crie sua Conta</h1>
+      <p>Rápido e fácil. Comece a usar nossa plataforma hoje mesmo.</p>
     </div>
   </div>
 
-  <!-- Coluna da Direita: Formulário de Cadastro -->
   <div class="form-section">
     <div class="form-container">
-      <h2>Crie sua Conta</h2>
-      <p class="subtitle">É rápido e fácil. Vamos começar!</p>
+      <h2>Registro de Novo Usuário</h2>
+      <p class="subtitle">Preencha os dados abaixo.</p>
 
       <form [formGroup]="cadastroForm" (ngSubmit)="onSubmit()">
         <mat-form-field appearance="outline">
-          <mat-label>Seu nome</mat-label>
-          <input matInput formControlName="name" required>
-          <mat-error *ngIf="cadastroForm.get('name')?.hasError('required')">
-            O nome é obrigatório.
-          </mat-error>
+          <mat-label>Nome Completo</mat-label>
+          <input matInput formControlName="nome">
         </mat-form-field>
-
         <mat-form-field appearance="outline">
-          <mat-label>Seu melhor email</mat-label>
-          <input matInput formControlName="email" type="email" required>
-           <mat-error *ngIf="cadastroForm.get('email')?.hasError('required')">
-            O email é obrigatório.
-          </mat-error>
-          <mat-error *ngIf="cadastroForm.get('email')?.hasError('email')">
-            Por favor, insira um email válido.
-          </mat-error>
+          <mat-label>Email</mat-label>
+          <input matInput formControlName="email" type="email">
         </mat-form-field>
-
         <mat-form-field appearance="outline">
-          <mat-label>Crie uma senha</mat-label>
-          <input matInput formControlName="password" [type]="hidePassword ? 'password' : 'text'" required>
-          <button mat-icon-button matSuffix (click)="togglePasswordVisibility()" type="button" aria-label="Mostrar/Esconder senha">
+          <mat-label>Senha</mat-label>
+          <input matInput formControlName="senha" [type]="hidePassword ? 'password' : 'text'">
+           <button mat-icon-button matSuffix (click)="togglePasswordVisibility()" type="button">
             <mat-icon>{{hidePassword ? 'visibility_off' : 'visibility'}}</mat-icon>
           </button>
-           <mat-error *ngIf="cadastroForm.get('password')?.hasError('required')">
-            A senha é obrigatória.
-          </mat-error>
-           <mat-error *ngIf="cadastroForm.get('password')?.hasError('minlength')">
-            A senha precisa ter no mínimo 6 caracteres.
-          </mat-error>
         </mat-form-field>
 
         <button mat-raised-button color="primary" type="submit" [disabled]="cadastroForm.invalid">
-          CRIAR MINHA CONTA
+          CADASTRAR
         </button>
       </form>
 
       <div class="actions">
         <span>Já tem uma conta?</span>
-        <a routerLink="/login">Entre aqui</a>
+        <a routerLink="/login">Faça o login</a>
       </div>
     </div>
   </div>

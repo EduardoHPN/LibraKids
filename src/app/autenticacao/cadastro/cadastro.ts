@@ -1,15 +1,14 @@
 import { Component, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
-import { Router, RouterLink } from '@angular/router';
+import { RouterLink } from '@angular/router';
 import { CommonModule } from '@angular/common';
 
 // Imports do Angular Material
+import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
-import { AuthService } from '../../services/auth.service';
-import { NotificationService } from '../../services/notification.service';
 
 @Component({
   selector: 'app-cadastro',
@@ -18,6 +17,7 @@ import { NotificationService } from '../../services/notification.service';
     CommonModule,
     ReactiveFormsModule,
     RouterLink,
+    MatCardModule,
     MatFormFieldModule,
     MatInputModule,
     MatButtonModule,
@@ -27,39 +27,33 @@ import { NotificationService } from '../../services/notification.service';
   styleUrls: ['./cadastro.scss']
 })
 export class Cadastro implements OnInit {
+  // Declara o formulário e a variável para controlar a visibilidade da senha
   cadastroForm!: FormGroup;
   hidePassword = true;
 
-  constructor(
-    private fb: FormBuilder,
-    private router: Router,
-    private authService: AuthService,
-    private notificationService: NotificationService
-  ) { }
+  // Injeta o FormBuilder para criar o formulário
+  constructor(private fb: FormBuilder) {}
 
   ngOnInit(): void {
+    // Inicializa o formulário na inicialização do componente
     this.cadastroForm = this.fb.group({
-      name: ['', [Validators.required]],
+      // Define os campos e suas validações
+      nome: ['', [Validators.required]],
       email: ['', [Validators.required, Validators.email]],
-      password: ['', [Validators.required, Validators.minLength(6)]]
+      senha: ['', [Validators.required, Validators.minLength(6)]]
     });
   }
 
+  // Função para alternar a visibilidade da senha
   togglePasswordVisibility(): void {
     this.hidePassword = !this.hidePassword;
   }
 
+  // Função chamada ao enviar o formulário
   onSubmit(): void {
     if (this.cadastroForm.valid) {
-      this.authService.register(this.cadastroForm.value).subscribe({
-        next: (response) => {
-          this.notificationService.showSuccess('Conta criada com sucesso! Por favor, faça o login.');
-          this.router.navigate(['/login']);
-        },
-        error: (err) => {
-          this.notificationService.showError(err.error.message || 'Erro ao criar a conta.');
-        }
-      });
+      console.log('Dados do formulário de cadastro:', this.cadastroForm.value);
+      // Aqui você chamaria um serviço para enviar os dados para o backend
     }
   }
 }
