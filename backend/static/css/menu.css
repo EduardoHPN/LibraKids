@@ -1,0 +1,209 @@
+/* backend/static/css/menu.css */
+
+:root {
+    --roxo-claro: #f3e5f5;
+    --roxo-escuro: #4a148c;
+    --roxo-principal: #9c27b0;
+    --branco: #ffffff;
+    --cinza-texto: #555;
+    --roxo-claro-hover: #b39ddb;
+}
+
+body {
+    background-color: var(--roxo-claro);
+    color: var(--cinza-texto);
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    margin: 0;
+    display: flex; /* Adicionado para o layout principal */
+    min-height: 100vh;
+}
+
+/* --- Layout do menu --- */
+.sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 60px;
+    background-color: var(--roxo-escuro);
+    color: var(--branco);
+    padding: 20px 0;
+    box-shadow: 2px 0 5px rgba(0, 0, 0, 0.2);
+    transition: width 0.3s ease;
+    overflow: hidden;
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+.sidebar.is-open {
+    width: 250px;
+}
+
+.sidebar-header {
+    display: flex;
+    align-items: center;
+    padding: 0 15px;
+}
+
+.sidebar-title {
+    font-size: 1.5rem;
+    white-space: nowrap;
+    opacity: 0;
+    transition: opacity 0.1s ease;
+    margin-left: 10px;
+}
+
+.sidebar.is-open .sidebar-title {
+    opacity: 1;
+}
+
+.sidebar-nav {
+    flex-grow: 1;
+    padding-top: 20px;
+}
+
+.sidebar-nav ul {
+    list-style-type: none;
+    padding: 0;
+    margin: 0;
+}
+
+.sidebar-nav li a {
+    display: flex;
+    align-items: center;
+    color: var(--branco);
+    text-decoration: none;
+    padding: 12px 15px;
+    border-radius: 5px;
+    margin-bottom: 8px;
+    white-space: nowrap;
+    transition: background-color 0.3s ease;
+}
+
+.sidebar-nav li a:hover {
+    background-color: var(--roxo-principal);
+}
+
+.sidebar-nav .icon {
+    font-size: 1.5rem;
+    margin-right: 15px;
+}
+
+.sidebar-nav .link-text {
+    opacity: 0;
+    transition: opacity 0.1s ease;
+}
+
+.sidebar.is-open .sidebar-nav .link-text {
+    opacity: 1;
+}
+
+.sidebar-footer {
+    padding: 0 15px;
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.sidebar-footer a {
+    text-decoration: none;
+}
+
+.btn-logout, .btn-login {
+    width: 100%;
+    background-color: #d9534f;
+    color: var(--branco);
+    border: none;
+    padding: 10px 20px;
+    border-radius: 5px;
+    white-space: nowrap;
+    opacity: 0;
+    transition: opacity 0.1s ease, background-color 0.3s ease;
+}
+
+.sidebar.is-open .btn-logout, .sidebar.is-open .btn-login {
+    opacity: 1;
+}
+
+.btn-logout:hover {
+    background-color: #c9302c;
+}
+
+.btn-login {
+    background-color: #28a745;
+}
+
+.btn-login:hover {
+    background-color: #218838;
+}
+
+/* --- Botão de alternância --- */
+#menu-toggle {
+    position: fixed;
+    top: 15px;
+    left: 15px;
+    background-color: transparent;
+    border: none;
+    color: var(--branco);
+    font-size: 2rem;
+    cursor: pointer;
+    z-index: 1001; /* Fica acima do menu */
+    transition: left 0.3s ease;
+}
+
+.sidebar.is-open + #menu-toggle {
+    left: 215px;
+}
+
+/* --- Layout do conteúdo principal --- */
+.content-wrapper {
+    flex-grow: 1;
+    padding: 20px;
+    margin-left: 60px; /* Espaço para o menu fechado */
+    transition: margin-left 0.3s ease;
+}
+
+.sidebar.is-open + #menu-toggle + .content-wrapper {
+    margin-left: 250px;
+}
+
+/* --- Estilos para a página inicial --- */
+header h1 {
+    font-size: 2.5rem;
+    color: var(--roxo-principal);
+    margin-bottom: 30px;
+}
+
+.module-link {
+    text-decoration: none;
+    color: inherit;
+}
+
+#modules {
+    display: flex;
+    gap: 30px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.module {
+    background-color: var(--branco);
+    padding: 40px;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    text-align: center;
+    width: 300px;
+    cursor: pointer;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.module:hover {
+    transform: translateY(-10px) scale(1.05);
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.2);
+}
+
+.module h2 {
+    color: var(--roxo-principal);
+    margin-top: 0;
+}

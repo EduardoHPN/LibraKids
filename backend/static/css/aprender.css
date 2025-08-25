@@ -1,0 +1,37 @@
+/* backend/static/css/aprender.css */
+
+/* Cores e fontes para consistência */
+:root {
+    --roxo-claro: #f3e5f5;
+    --roxo-escuro: #4a148c;
+    --roxo-principal: #9c27b0;
+}
+
+/* Sobrescrevendo cores do Bootstrap */
+.bg-primary { background-color: var(--roxo-principal) !important; }
+.text-primary { color: var(--roxo-principal) !important; }
+.btn-primary { 
+    background-color: var(--roxo-principal);
+    border-color: var(--roxo-principal);
+}
+.btn-primary:hover {
+    background-color: var(--roxo-escuro);
+    border-color: var(--roxo-escuro);
+}
+.bg-secondary { background-color: var(--roxo-escuro) !important; }
+.btn-secondary {
+    background-color: var(--roxo-escuro);
+    border-color: var(--roxo-escuro);
+}
+.btn-secondary:hover {
+    background-color: #311b92;
+    border-color: #311b92;
+}
+
+body {
+    background-color: var(--roxo-claro);
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+}
+main { flex: 1; }

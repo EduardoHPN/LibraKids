@@ -1,0 +1,55 @@
+/* backend/static/css/auth.css */
+
+:root {
+    --roxo-claro: #f3e5f5;
+    --roxo-escuro: #4a148c;
+    --roxo-principal: #9c27b0;
+    --branco: #ffffff;
+    --cinza-claro: #f8f9fa;
+    --texto-escuro: #495057;
+}
+
+body {
+    background-color: var(--roxo-claro);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+}
+
+.auth-container {
+    background-color: var(--branco);
+    padding: 3rem;
+    border-radius: 12px;
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+    width: 100%;
+    max-width: 450px;
+}
+
+.auth-title {
+    color: var(--roxo-principal);
+    text-align: center;
+    margin-bottom: 1.5rem;
+    font-size: 2rem;
+}
+
+.form-group .form-label {
+    font-weight: 500;
+    color: var(--texto-escuro);
+}
+
+.btn-primary {
+    background-color: var(--roxo-principal);
+    border-color: var(--roxo-principal);
+    font-weight: bold;
+    transition: background-color 0.3s ease, border-color 0.3s ease;
+}
+
+.btn-primary:hover {
+    background-color: var(--roxo-escuro);
+    border-color: var(--roxo-escuro);
+}
+
+.alert {
+    margin-bottom: 1rem;
+}

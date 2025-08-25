@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+
+{% block content %}
+<header class="text-center py-4">
+    <h1 class="display-5">Módulo de Aprendizado</h1>
+</header>
+
+<div class="row justify-content-center">
+    <div class="col-lg-8 col-md-10">
+        <div class="card p-4 shadow-sm">
+            <div class="card-body text-center">
+                <h2 class="card-title mb-4">Vamos praticar!</h2>
+                
+                <p class="card-text lead" id="instrucao">Faça a letra abaixo:</p>
+                
+                <div id="game-container" class="mt-4">
+                    <div class="d-flex justify-content-center align-items-center mb-4">
+                        <div class="p-3 border rounded me-4" style="width: 150px; height: 150px;">
+                            <p class="h1 fw-bold text-primary" id="letra-desafio">A</p>
+                        </div>
+                        <div>
+                            <img id="imagem-referencia" src="{{ url_for('static', filename='imagens/a.jpg') }}" alt="Imagem da letra A em Libras" class="img-fluid rounded border" style="max-height: 150px;">
+                        </div>
+                    </div>
+
+                    <div class="mt-4 position-relative" id="webcam-container">
+                        <p class="h4">Sua Câmera</p>
+                        <video id="webcam-preview" class="w-100 rounded shadow" style="border: 2px solid #ccc;"></video>
+                        <canvas id="overlay-canvas" class="position-absolute top-0 start-0 w-100 h-100"></canvas>
+                    </div>
+
+                    <button id="capturar-btn" class="btn btn-primary mt-3">Capturar e Verificar</button>
+
+                    <div class="mt-4">
+                        <p id="feedback-message" class="h3 fw-bold"></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="{{ url_for('static', filename='js/aprender.js') }}"></script>
+{% endblock %}

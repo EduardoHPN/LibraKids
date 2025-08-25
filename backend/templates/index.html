@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+
+{% block content %}
+    <header class="text-center py-4">
+        <h1>Duolingo de Libras</h1>
+    </header>
+
+    <section id="modules">
+        <a href="{{ url_for('aprender_letras') }}" class="module-link">
+            <div class="module">
+                <h2>Aprender Letras</h2>
+                <p>Clique para aprender uma nova letra em Libras.</p>
+            </div>
+        </a>
+        
+        <a href="{{ url_for('em_breve') }}" class="module-link">
+            <div class="module">
+                <h2>Módulo 2</h2>
+                <p>Descrição do segundo módulo.</p>
+            </div>
+        </a>
+        
+        <a href="{{ url_for('em_breve') }}" class="module-link">
+            <div class="module">
+                <h2>Módulo 3</h2>
+                <p>Descrição do terceiro módulo.</p>
+            </div>
+        </a>
+    </section>
+{% endblock %}

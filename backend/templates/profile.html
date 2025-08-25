@@ -1,0 +1,14 @@
+
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container my-5 text-center">
+    <div class="card p-4 shadow-sm" style="max-width: 500px; margin: auto;">
+        <div class="card-body">
+            <h1 class="card-title text-primary">Perfil do Usuário</h1>
+            <p class="card-text lead">Bem-vindo, {{ current_user.username }}!</p>
+            <p class="text-muted">Aqui serão exibidas as informações do seu perfil e o seu progresso.</p>
+        </div>
+    </div>
+</div>
+{% endblock %}
