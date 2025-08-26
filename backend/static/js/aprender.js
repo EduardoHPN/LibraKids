@@ -6,7 +6,7 @@ const letraDesafioElement = document.getElementById('letra-desafio');
 const imagemReferenciaElement = document.getElementById('imagem-referencia');
 const feedbackMessage = document.getElementById('feedback-message');
 const contexto = overlayCanvas.getContext('2d');
-const letras = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+const letras = 'ABCDEFGILMNOPQRSTUVXY';
 const caminhoImagens = '/static/imagens/';
 
 // Função para iniciar a webcam e o canvas
@@ -32,7 +32,7 @@ async function iniciarWebcam() {
 function gerarNovaLetra() {
     const letraAleatoria = letras[Math.floor(Math.random() * letras.length)];
     letraDesafioElement.textContent = letraAleatoria;
-    imagemReferenciaElement.src = caminhoImagens + letraAleatoria.toLowerCase() + '.png';
+    imagemReferenciaElement.src = caminhoImagens + letraAleatoria.toLowerCase() + '.jpg';
     imagemReferenciaElement.alt = `Imagem da letra ${letraAleatoria} em Libras`;
     feedbackMessage.textContent = '';
     contexto.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height); // Limpa o canvas
@@ -47,7 +47,7 @@ async function capturarEVerificar() {
     tempContext.drawImage(webcamPreview, 0, 0, tempCanvas.width, tempCanvas.height);
     
     // Converte a imagem do canvas para Base64
-    const imageDataUrl = tempCanvas.toDataURL('image/jpeg');
+    const imageDataUrl = tempCanvas.toDataURL('image/jpg');
 
     const targetLetter = letraDesafioElement.textContent;
 

@@ -15,13 +15,14 @@
             <h2 class="sidebar-title">Duolingo</h2>
         </div>
         <nav class="sidebar-nav">
-            <ul>
-                <li><a href="{{ url_for('index') }}"><span class="link-text">Home</span></a></li>
-                <li><a href="{{ url_for('aprender_letras') }}"><span class="link-text">Aprender</span></a></li>
-               {% if current_user.is_authenticated %}
-                    <li><a href="{{ url_for('profile') }}"><span class="link-text">Perfil: {{ current_user.username }}</span></a></li>
-                {% endif %}
-            </ul>
+    <ul>
+        <li><a href="{{ url_for('index') }}"><span class="link-text">Home</span></a></li>
+        <li><a href="{{ url_for('aprender_letras') }}"><span class="link-text">Aprender</span></a></li>
+        <li><a href="{{ url_for('data_recorder') }}"><span class="link-text">Gravar Dados</span></a></li>
+      {% if current_user.is_authenticated %}
+            <li><a href="{{ url_for('profile') }}"><span class="link-text">Perfil: {{ current_user.username }}</span></a></li>
+        {% endif %}
+    </ul>
         </nav>
         <div class="sidebar-footer">
             {% if current_user.is_authenticated %}

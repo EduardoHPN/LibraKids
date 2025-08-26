@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+
+{% block head_content %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/data_recorder.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="data-recorder-container">
+    <header class="text-center py-4">
+        <h1 class="display-5">Coletor de Dados</h1>
+    </header>
+
+    <div class="recorder-controls">
+        <div class="form-group">
+            <label for="letter-select">Escolha a letra:</label>
+            <select id="letter-select" class="form-control">
+                <option value="A">A</option>
+                <option value="B">B</option>
+                <option value="C">C</option>
+                <option value="D">D</option>
+                <option value="E">E</option>
+                <option value="F">F</option>
+                <option value="G">G</option>
+                <option value="H">H</option>
+                <option value="I">I</option>
+                <option value="J">J</option>
+                <option value="K">K</option>
+                <option value="L">L</option>
+                <option value="M">M</option>
+                <option value="N">N</option>
+                <option value="O">O</option>
+                <option value="P">P</option>
+                <option value="Q">Q</option>
+                <option value="R">R</option>
+                <option value="S">S</option>
+                <option value="T">T</option>
+                <option value="U">U</option>
+                <option value="V">V</option>
+                <option value="W">W</option>
+                <option value="X">X</option>
+                <option value="Y">Y</option>
+                <option value="Z">Z</option>
+            </select>
+        </div>
+        <button id="start-btn" class="btn btn-success mt-3">Iniciar Gravação</button>
+        <button id="stop-btn" class="btn btn-danger mt-3" disabled>Parar Gravação</button>
+    </div>
+
+    <div class="recorder-live-view">
+        <p class="text-center h4 mt-4">Câmera</p>
+        <video id="webcam-live" class="w-100 rounded shadow"></video>
+    </div>
+
+    <div class="recorder-status mt-4">
+        <p id="status-message" class="text-center lead">Pronto para gravar.</p>
+    </div>
+</div>
+<script src="{{ url_for('static', filename='js/data_recorder.js') }}"></script>
+{% endblock %}
