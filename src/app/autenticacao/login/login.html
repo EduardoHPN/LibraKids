@@ -16,13 +16,13 @@
 
       <form [formGroup]="loginForm" (ngSubmit)="onSubmit()">
         <mat-form-field appearance="outline">
-          <mat-label>Email</mat-label>
-          <input matInput formControlName="email" type="email" required autocomplete="username">
-          <mat-error *ngIf="loginForm.get('email')?.hasError('required')">
-            O email é obrigatório.
+          <mat-label>Nome de Usuário</mat-label>
+          <input matInput formControlName="username" type="text" required autocomplete="username">
+          <mat-error *ngIf="loginForm.get('username')?.hasError('required')">
+            O nome de usuário é obrigatório.
           </mat-error>
-          <mat-error *ngIf="loginForm.get('email')?.hasError('email')">
-            Por favor, insira um email válido.
+          <mat-error *ngIf="loginForm.get('username')?.hasError('username')">
+            Por favor, insira um nome de usuário válido.
           </mat-error>
         </mat-form-field>
 

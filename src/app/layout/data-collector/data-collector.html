@@ -1,0 +1,45 @@
+<div class="main-container">
+  <mat-card class="app-card webcam-card">
+    <div class="webcam-frame">
+      <video #videoElement class="webcam-video" autoplay muted></video>
+      <canvas #canvasElement style="display: none;"></canvas>
+    </div>
+  </mat-card>
+  
+  <div class="info-column">
+    <mat-card class="app-card training-controls-card">
+      <div class="card-header">
+        <div class="icon-circle">
+          <mat-icon class="card-icon">photo_camera</mat-icon>
+        </div>
+        <h2 class="card-title">Treinar o Modelo</h2>
+      </div>
+      <mat-card-content class="training-content">
+        <p class="instruction-text">Qual letra você está fazendo?</p>
+        <mat-form-field appearance="outline" class="full-width-input">
+          <mat-label>Letra</mat-label>
+          <input matInput [(ngModel)]="trainingLabel" maxlength="1" placeholder="Ex: A">
+        </mat-form-field>
+        
+        <button mat-raised-button color="primary" class="save-button" [disabled]="!trainingLabel" (click)="captureAndSave()">
+          <mat-icon>camera_alt</mat-icon> Salvar Gesto
+        </button>
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card class="app-card feedback-card">
+      <mat-card-content class="feedback-content">
+        <div class="info-item">
+          <mat-icon class="info-icon" color="primary">info</mat-icon>
+          <p class="feedback-text">{{ feedbackMessage }}</p>
+        </div>
+        <div class="info-item tip-item">
+          <mat-icon class="info-icon" color="accent">lightbulb</mat-icon>
+          <p class="tip-text">
+           Henry, Carlos ou Lucas. Salvem no mínimo 20 imagens de cada sinal para o modelo aprender de forma eficaz.
+          </p>
+        </div>
+      </mat-card-content>
+    </mat-card>
+  </div>
+</div>

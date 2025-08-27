@@ -26,14 +26,10 @@
         <mat-icon matListItemIcon>camera_alt</mat-icon>
         <span *ngIf="isExpanded" matListItemTitle>Coletar Amostras</span>
       </a>
-      <a mat-list-item routerLink="/app/processador" routerLinkActive="active-link" matTooltip="Processar Modelo" [matTooltipDisabled]="isExpanded">
-        <mat-icon matListItemIcon>hub</mat-icon>
-        <span *ngIf="isExpanded" matListItemTitle>Processar Modelo</span>
-      </a>
     </mat-nav-list>
 
     <div class="sidenav-footer">
-      <a mat-list-item matTooltip="Sair" [matTooltipDisabled]="isExpanded">
+      <a mat-list-item matTooltip="Sair" [matTooltipDisabled]="isExpanded" (click)="onLogout()">
         <mat-icon matListItemIcon>logout</mat-icon>
         <span *ngIf="isExpanded" matListItemTitle>Sair</span>
       </a>

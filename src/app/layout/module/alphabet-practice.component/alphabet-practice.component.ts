@@ -1,73 +1,112 @@
+// Remova tudo relacionado a 'isTrainingMode' e 'trainingLabel'
+
 import { Component, OnInit, OnDestroy, ViewChild, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterLink } from '@angular/router';
+import { FormsModule } from '@angular/forms';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
+import { MatProgressBarModule } from '@angular/material/progress-bar'; // Corrigido
 import { MatIconModule } from '@angular/material/icon';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { SignRecognitionService } from '../../../services/sign-recognition';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner'; // Para o spinner
+import { LibrasService } from '../../../services/libras.service';
 
 @Component({
-  selector: 'app-alphabet-practice',
+  selector: 'app-libras-practice',
   standalone: true,
-  imports: [ CommonModule, RouterLink, MatCardModule, MatButtonModule, MatIconModule, MatProgressSpinnerModule ],
+  imports: [
+    CommonModule,
+    FormsModule,
+    MatCardModule,
+    MatButtonModule,
+    MatProgressBarModule,
+    MatIconModule,
+    MatProgressSpinnerModule
+  ],
   templateUrl: './alphabet-practice.component.html',
   styleUrls: ['./alphabet-practice.component.scss']
 })
 export class AlphabetPracticeComponent implements OnInit, OnDestroy {
-  @ViewChild('videoElement') videoElement!: ElementRef<HTMLVideoElement>;
-  statusMessage: string = 'Carregando modelo de IA...';
-  isCameraLoading: boolean = true;
-  predictedLetter: string = '?';
-  private stream: MediaStream | null = null;
-  private isComponentActive = true;
+  @ViewChild('videoElement') videoElement!: ElementRef;
+  @ViewChild('canvasElement') canvasElement!: ElementRef;
 
-  constructor(private signRecognitionService: SignRecognitionService) { }
+  videoStream!: MediaStream;
+  videoWidth = 640;
+  videoHeight = 480;
+  targetLetters = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y'];
+  targetLetter: string = '';
+  predictionResult: any = null;
+  processingInterval: any;
+  isLoading = false;
 
-  async ngOnInit(): Promise<void> {
-    await this.signRecognitionService.initialize();
-    this.statusMessage = 'Modelo carregado. Iniciando câmera...';
-    await this.setupCamera();
+  constructor(private librasService: LibrasService) { }
+
+  ngOnInit(): void {
+    this.startWebcam();
+    this.selectRandomLetter();
   }
 
   ngOnDestroy(): void {
-    this.isComponentActive = false;
-    this.stopCamera();
+    this.stopWebcam();
+    if (this.processingInterval) {
+      clearInterval(this.processingInterval);
+    }
   }
 
-  async setupCamera(): Promise<void> {
-    try {
-      this.stream = await navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480 } });
-      this.videoElement.nativeElement.srcObject = this.stream;
-      this.videoElement.nativeElement.addEventListener('loadeddata', () => {
-        this.isCameraLoading = false;
-        this.statusMessage = 'Posicione sua mão na área do vídeo.';
-        this.predictionLoop();
+  startWebcam(): void {
+    navigator.mediaDevices.getUserMedia({ video: true })
+      .then(stream => {
+        this.videoStream = stream;
+        this.videoElement.nativeElement.srcObject = stream;
+        this.videoElement.nativeElement.play();
+        setTimeout(() => this.startProcessing(), 1000);
+      })
+      .catch(err => {
+        console.error('Erro ao acessar a webcam:', err);
+        alert('Erro ao acessar a webcam. Verifique as permissões.');
       });
-    } catch (err) {
-      this.isCameraLoading = false;
-      this.statusMessage = 'Erro ao acessar a câmera. Verifique as permissões.';
+  }
+
+  stopWebcam(): void {
+    if (this.videoStream) {
+      this.videoStream.getTracks().forEach(track => track.stop());
     }
   }
 
-  predictionLoop(): void {
-    if (!this.isComponentActive || this.videoElement.nativeElement.paused || this.videoElement.nativeElement.ended) {
-      return;
-    }
-    const landmarks = this.signRecognitionService.getLocalLandmarks(this.videoElement.nativeElement, performance.now());
-    if (landmarks) {
-      this.signRecognitionService.recognizeSign(landmarks).subscribe(response => {
-        this.predictedLetter = response.letter;
-      });
-    } else {
-      this.predictedLetter = '?';
-    }
-    requestAnimationFrame(() => this.predictionLoop());
+  selectRandomLetter(): void {
+    const randomIndex = Math.floor(Math.random() * this.targetLetters.length);
+    this.targetLetter = this.targetLetters[randomIndex];
+    this.predictionResult = null;
   }
 
-  stopCamera(): void {
-    if (this.stream) {
-      this.stream.getTracks().forEach(track => track.stop());
-    }
+  startProcessing(): void {
+    if (this.processingInterval) clearInterval(this.processingInterval);
+    this.processingInterval = setInterval(() => this.predictLetter(), 500);
+  }
+
+  predictLetter(): void {
+    if (!this.videoElement.nativeElement.srcObject) return;
+    const video = this.videoElement.nativeElement;
+    const canvas = this.canvasElement.nativeElement;
+    const context = canvas.getContext('2d');
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    context.clearRect(0, 0, canvas.width, canvas.height);
+    context.drawImage(video, 0, 0, canvas.width, canvas.height);
+    const imageDataUrl = canvas.toDataURL('image/jpeg');
+    this.isLoading = true;
+    this.librasService.predictLetter(imageDataUrl, this.targetLetter).subscribe({
+      next: (response) => {
+        this.predictionResult = response;
+        this.isLoading = false;
+        if (response.correct) {
+          setTimeout(() => this.selectRandomLetter(), 2000);
+        }
+      },
+      error: (error) => {
+        this.predictionResult = { message: 'Erro na conexão com o servidor.', success: false };
+        this.isLoading = false;
+        console.error(error);
+      }
+    });
   }
 }

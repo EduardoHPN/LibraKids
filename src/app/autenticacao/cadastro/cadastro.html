@@ -15,22 +15,12 @@
       <p class="subtitle">É rápido e fácil. Vamos começar!</p>
 
       <form [formGroup]="cadastroForm" (ngSubmit)="onSubmit()">
+       
         <mat-form-field appearance="outline">
-          <mat-label>Seu nome</mat-label>
-          <input matInput formControlName="name" required>
-          <mat-error *ngIf="cadastroForm.get('name')?.hasError('required')">
-            O nome é obrigatório.
-          </mat-error>
-        </mat-form-field>
-
-        <mat-form-field appearance="outline">
-          <mat-label>Seu melhor email</mat-label>
-          <input matInput formControlName="email" type="email" required>
-           <mat-error *ngIf="cadastroForm.get('email')?.hasError('required')">
-            O email é obrigatório.
-          </mat-error>
-          <mat-error *ngIf="cadastroForm.get('email')?.hasError('email')">
-            Por favor, insira um email válido.
+          <mat-label>Seu nome de usuário</mat-label>
+          <input matInput formControlName="username" required>
+          <mat-error *ngIf="cadastroForm.get('username')?.hasError('required')">
+            O nome de usuário é obrigatório.
           </mat-error>
         </mat-form-field>
 

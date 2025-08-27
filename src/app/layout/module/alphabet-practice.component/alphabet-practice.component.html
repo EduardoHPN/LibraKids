@@ -1,26 +1,39 @@
-<div class="practice-container">
-  <div class="header">
-    <h1>Prática do Alfabeto</h1>
-    <p>Use sua câmera para treinar em tempo real.</p>
-  </div>
-  <mat-card class="camera-card">
-    <div class="video-wrapper">
-      <video #videoElement autoplay playsinline muted></video>
-      <div class="prediction-overlay">
-        <span>{{ predictedLetter }}</span>
-      </div>
-      <div class="loading-overlay" *ngIf="isCameraLoading">
-        <mat-progress-spinner mode="indeterminate" diameter="60"></mat-progress-spinner>
-      </div>
+<div class="main-container">
+  <mat-card class="app-card webcam-card">
+    <div class="webcam-frame">
+      <video #videoElement class="webcam-video" autoplay muted></video>
+      <canvas #canvasElement style="display: none;"></canvas>
     </div>
-    <mat-card-content class="status-message">
-      <p>{{ statusMessage }}</p>
-    </mat-card-content>
   </mat-card>
-  <div class="footer-actions">
-    <button mat-stroked-button routerLink="/app/trilha">
-      <mat-icon>arrow_back</mat-icon>
-      <span>Voltar para a Trilha</span>
-    </button>
+  
+  <div class="info-column">
+    <mat-card class="app-card title-card">
+      <div class="card-header">
+        <div class="icon-circle">
+          <mat-icon class="card-icon">camera_alt</mat-icon>
+        </div>
+        <h2 class="card-title">Prática do Alfabeto</h2>
+      </div>
+      <mat-card-content class="title-content">
+        <p class="instruction-text">Faça o sinal para a letra</p>
+        <h1 class="target-letter">{{ targetLetter }}</h1>
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card class="app-card feedback-card">
+      <mat-card-content class="feedback-content">
+        <div class="info-item">
+          <mat-icon class="info-icon" color="primary">forum</mat-icon>
+          <p class="feedback-text">{{ predictionResult?.message || 'Aguardando seu gesto...' }}</p>
+        </div>
+        <div class="info-item" *ngIf="predictionResult">
+          <mat-icon class="info-icon" color="primary">insights</mat-icon>
+          <div>
+            <p class="confidence-text">Previsão: {{ predictionResult.predicted_letter }}</p>
+            <p class="confidence-text">Confiança: {{ (predictionResult.confidence * 100).toFixed(2) }}%</p>
+          </div>
+        </div>
+      </mat-card-content>
+    </mat-card>
   </div>
 </div>
