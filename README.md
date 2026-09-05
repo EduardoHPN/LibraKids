@@ -1,10 +1,10 @@
-# 🤟 Libras Recognition
+#  Libras Recognition
 
 Sistema de reconhecimento de palavras em Libras em tempo real com
 **MediaPipe Holistic + LSTM Bidirecional + TensorFlow** e feedback
 automático sobre a execução do sinal.
 
-## 📁 Estrutura do Projeto
+##  Estrutura do Projeto
 
 ```
 libras-recognition/
@@ -29,7 +29,7 @@ libras-recognition/
 └── docs/                      ← Documentação técnica
 ```
 
-## 🚀 Como Começar
+##  Como Começar
 
 ```bash
 # 1. Ambiente
@@ -47,7 +47,7 @@ python scripts/04_evaluate.py
 python scripts/05_run_webcam.py
 ```
 
-## ⚙️ Configuração
+##  Configuração
 
 Toda configuração está em `configs/default.yaml`. Para variantes:
 
@@ -56,7 +56,7 @@ cp configs/default.yaml configs/small.yaml
 python scripts/03_train.py --config configs/small.yaml
 ```
 
-## 📦 Versões Compatíveis
+##  Versões Compatíveis
 
 ```
 python 3.10.x | tensorflow 2.12.0 | mediapipe 0.10.9
