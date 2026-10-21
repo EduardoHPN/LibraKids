@@ -56,6 +56,46 @@ cp configs/default.yaml configs/small.yaml
 python scripts/03_train.py --config configs/small.yaml
 ```
 
+##  Backend (API) e Banco de Dados
+
+A API Flask (`src/libras/api/`) usa PostgreSQL (Supabase) em produção. A URL do
+banco vem da variável `DATABASE_URL`; sem ela, a API cai num SQLite local em
+`instance/site.db` (**apenas para desenvolvimento** — um aviso aparece no log).
+
+```bash
+pip install -e .[api]
+cp .env.example .env            # preencha DATABASE_URL (o .env não é versionado)
+```
+
+O schema é gerenciado por migrações (Flask-Migrate/Alembic, pasta `migrations/`):
+
+```bash
+flask --app run_backend db upgrade                    # aplica as migrações no banco
+flask --app run_backend db migrate -m "descricao"     # gera migração após mudar um model
+python run_backend.py                                 # sobe a API em localhost:5001
+```
+
+> Já tem um `instance/site.db` criado antes das migrações (via `db.create_all()`)?
+> Marque-o como atualizado com `flask --app run_backend db stamp head` em vez de `db upgrade`.
+
+Para copiar os usuários do SQLite local para o banco de `DATABASE_URL` (sem
+duplicar; hashes bcrypt copiados como estão; rode o `db upgrade` antes):
+
+```bash
+python scripts/migrate_sqlite_to_postgres.py --dry-run   # só mostra
+python scripts/migrate_sqlite_to_postgres.py
+```
+
+**Observações sobre o Supabase**
+
+- Use a connection string do **Session pooler**: host `*.pooler.supabase.com`,
+  porta **5432**. A conexão direta (`db.<ref>.supabase.co`) é só IPv6 e costuma
+  falhar em containers; o **Transaction pooler** (porta 6543) não suporta os
+  prepared statements que o psycopg 3 usa.
+- Exija TLS com `?sslmode=require` no fim da URL.
+- `postgres://` e `postgresql://` são convertidas automaticamente para o driver
+  `postgresql+psycopg://`.
+
 ##  Versões Compatíveis
 
 ```

@@ -2,39 +2,94 @@
 from __future__ import annotations
 
 import os
+from typing import Any
 
 os.environ.setdefault("TF_CPP_MIN_LOG_LEVEL", "3")
 os.environ.setdefault("TF_ENABLE_ONEDNN_OPTS", "0")
 
+from dotenv import load_dotenv
 from flask import Flask, jsonify
 from flask_cors import CORS
+from sqlalchemy.engine import make_url
 
-from libras.api.extensions import bcrypt, db
-from libras.config import PATHS
+from libras.api.extensions import bcrypt, db, migrate
+from libras.config import PATHS, PROJECT_ROOT
+
+_ENV_FILE = PROJECT_ROOT / ".env"
 
 
-def create_app() -> Flask:
+def normalize_database_url(url: str) -> str:
+    """
+    Força o driver psycopg 3 em URLs PostgreSQL.
+
+    Provedores (Supabase, Heroku...) entregam `postgres://` ou
+    `postgresql://`, que o SQLAlchemy resolveria para o psycopg2 — driver
+    que não instalamos. Outras URLs (ex.: `sqlite://`) passam intactas.
+    """
+    for prefix in ("postgres://", "postgresql://"):
+        if url.startswith(prefix):
+            return "postgresql+psycopg://" + url[len(prefix):]
+    return url
+
+
+def _default_database_uri(app: Flask) -> str:
+    """URL do banco a partir de `DATABASE_URL`, com fallback SQLite local."""
+    url = os.environ.get("DATABASE_URL", "").strip()
+    if url:
+        return normalize_database_url(url)
+
+    # Fallback só para desenvolvimento local — em produção o disco do
+    # container é efêmero e os usuários seriam perdidos a cada deploy.
+    PATHS["instance"].mkdir(parents=True, exist_ok=True)
+    db_path = PATHS["instance"] / "site.db"
+    app.logger.warning(
+        "DATABASE_URL nao definida — usando SQLite local em %s "
+        "(apenas para desenvolvimento).", db_path,
+    )
+    return f"sqlite:///{db_path}"
+
+
+def create_app(test_config: dict[str, Any] | None = None) -> Flask:
+    """
+    Cria a aplicação Flask.
+
+    `test_config` sobrescreve qualquer configuração (usado nos testes,
+    ex.: `{"SQLALCHEMY_DATABASE_URI": "sqlite://"}` para SQLite em memória).
+    """
+    # Em produção as variáveis vêm do provedor; o .env é só conveniência
+    # local. override=False: variável já definida no ambiente prevalece.
+    if _ENV_FILE.is_file():
+        load_dotenv(_ENV_FILE, override=False)
+
     app = Flask(__name__)
 
     # SECRET_KEY não assina nada sensível hoje (auth usa token opaco salvo
     # no banco, não sessão de cookie assinada), mas fica configurável via
     # env var em vez de hardcoded no código-fonte.
     app.config["SECRET_KEY"] = os.environ.get("LIBRAS_SECRET_KEY", "dev-only-change-me")
-
-    PATHS["instance"].mkdir(parents=True, exist_ok=True)
-    db_path = PATHS["instance"] / "site.db"
-    app.config["SQLALCHEMY_DATABASE_URI"] = f"sqlite:///{db_path}"
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+    # pool_pre_ping descarta conexões que o pooler do Supabase já fechou;
+    # pool_recycle renova antes do timeout de inatividade do servidor.
+    app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {"pool_pre_ping": True, "pool_recycle": 300}
+
+    if test_config is None or "SQLALCHEMY_DATABASE_URI" not in test_config:
+        app.config["SQLALCHEMY_DATABASE_URI"] = _default_database_uri(app)
+    if test_config:
+        app.config.update(test_config)
 
     CORS(app, supports_credentials=True)
 
     db.init_app(app)
     bcrypt.init_app(app)
+    # O schema é gerenciado por migrações (pasta migrations/), não por
+    # db.create_all(): rode `flask --app run_backend db upgrade`.
+    # render_as_batch permite ALTER TABLE também no fallback SQLite.
+    migrate.init_app(app, db, directory=str(PROJECT_ROOT / "migrations"), render_as_batch=True)
 
-    with app.app_context():
-        from libras.api import models  # noqa: F401 — registra o model User antes do create_all
-        db.create_all()
-        print(f"Banco de dados: {db_path}")
+    from libras.api import models  # noqa: F401 — registra o model User no metadata
+
+    db_url = make_url(app.config["SQLALCHEMY_DATABASE_URI"])
+    print(f"Banco de dados: {db_url.render_as_string(hide_password=True)}")
 
     from libras.api.auth import auth_bp
     from libras.api.letter_routes import letter_bp

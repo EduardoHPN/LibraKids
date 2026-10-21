@@ -31,3 +31,8 @@ instance/
 backend/instance/
 backend/data/
 *.db
+
+# Variáveis de ambiente com credenciais reais (modelo em .env.example)
+.env
+.env.*
+!.env.example
