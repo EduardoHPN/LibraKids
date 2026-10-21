@@ -3,9 +3,12 @@ Wrapper sobre o MediaPipe Holistic.
 
 Centraliza:
   • Extração de keypoints (pose + subconjunto de face + mãos)
-  • Normalização temporal de sequências
   • Desenho de landmarks
   • Parsing de nomes de arquivo do V-LIBRASIL
+
+As partes puras (dimensões, subconjunto da face, normalizações e montagem
+do vetor) ficam em `libras.features.keypoints`, sem cv2/mediapipe, e são
+reexportadas aqui para não quebrar os scripts de treino.
 
 Compatível com mediapipe==0.10.9
 """
@@ -19,29 +22,21 @@ import cv2
 import mediapipe as mp
 import numpy as np
 
+from libras.features.keypoints import (  # noqa: F401 — reexportados
+    FACE_DIM,
+    FACE_SUBSET_INDICES,
+    HAND_DIM,
+    POSE_DIM,
+    REGION_SLICES,
+    TOTAL_DIM,
+    keypoints_from_arrays,
+    normalize_sequence,
+    normalize_spatial,
+)
+
 # Handles globais do MediaPipe
 _mp_holistic = mp.solutions.holistic
 _mp_drawing = mp.solutions.drawing_utils
-
-# Holistic sempre calcula os 468 pontos da face mesh internamente (não tem
-# modo parcial) — mas para reconhecimento de palavras em Libras, a imensa
-# maioria desses pontos (contorno de rosto, nariz, olhos) não carrega
-# informação do sinal e só adiciona ruído ao vetor de entrada da LSTM.
-# Mantemos apenas os marcadores não-manuais que de fato podem importar
-# (lábios + sobrancelhas); o resto da face é descartado no momento da
-# extração, não da captura.
-_FACE_SUBSET_CONNECTIONS = (
-    mp.solutions.face_mesh.FACEMESH_LIPS
-    | mp.solutions.face_mesh.FACEMESH_LEFT_EYEBROW
-    | mp.solutions.face_mesh.FACEMESH_RIGHT_EYEBROW
-)
-FACE_SUBSET_INDICES: list[int] = sorted({i for pair in _FACE_SUBSET_CONNECTIONS for i in pair})
-
-# Dimensões esperadas
-POSE_DIM = 33 * 4                      # x, y, z, visibility
-FACE_DIM = len(FACE_SUBSET_INDICES) * 3  # x, y, z — só lábios + sobrancelhas
-HAND_DIM = 21 * 3
-TOTAL_DIM = POSE_DIM + FACE_DIM + HAND_DIM + HAND_DIM
 
 
 # ── Detecção ────────────────────────────────────────────────
@@ -81,97 +76,23 @@ def extract_keypoints(results: Any) -> np.ndarray:
       face (subset) 60 × 3 = 180   — só lábios + sobrancelhas, ver FACE_SUBSET_INDICES
       left_hand    21 × 3  = 63
       right_hand   21 × 3  = 63
+
+    Só converte o resultado do MediaPipe em arrays; a montagem do vetor é
+    `keypoints_from_arrays` — a mesma usada pela API com landmarks do app.
     """
-    pose = (
-        np.array([[r.x, r.y, r.z, r.visibility]
-                  for r in results.pose_landmarks.landmark]).flatten()
-        if results.pose_landmarks else np.zeros(POSE_DIM)
+    def _points(landmarks: Any, with_visibility: bool = False) -> np.ndarray | None:
+        if not landmarks:
+            return None
+        if with_visibility:
+            return np.array([[r.x, r.y, r.z, r.visibility] for r in landmarks.landmark])
+        return np.array([[r.x, r.y, r.z] for r in landmarks.landmark])
+
+    return keypoints_from_arrays(
+        pose=_points(results.pose_landmarks, with_visibility=True),
+        face=_points(results.face_landmarks),
+        left_hand=_points(results.left_hand_landmarks),
+        right_hand=_points(results.right_hand_landmarks),
     )
-    face = (
-        np.array([[results.face_landmarks.landmark[i].x,
-                   results.face_landmarks.landmark[i].y,
-                   results.face_landmarks.landmark[i].z]
-                  for i in FACE_SUBSET_INDICES]).flatten()
-        if results.face_landmarks else np.zeros(FACE_DIM)
-    )
-    lh = (
-        np.array([[r.x, r.y, r.z]
-                  for r in results.left_hand_landmarks.landmark]).flatten()
-        if results.left_hand_landmarks else np.zeros(HAND_DIM)
-    )
-    rh = (
-        np.array([[r.x, r.y, r.z]
-                  for r in results.right_hand_landmarks.landmark]).flatten()
-        if results.right_hand_landmarks else np.zeros(HAND_DIM)
-    )
-    return normalize_spatial(np.concatenate([pose, face, lh, rh]))
-
-
-# ── Normalização espacial ────────────────────────────────────
-
-# Índices dos ombros na topologia padrão do MediaPipe Pose.
-_LEFT_SHOULDER_IDX = 11
-_RIGHT_SHOULDER_IDX = 12
-
-
-def normalize_spatial(vec: np.ndarray) -> np.ndarray:
-    """
-    Centraliza os keypoints no meio-ombro e escala pela largura dos ombros.
-
-    Sem isso, o mesmo sinal gera vetores bem diferentes só por o usuário
-    estar mais perto/longe da câmera ou fora do centro do quadro — variância
-    que o augmentation (spatial_jitter/scale_keypoints) tenta compensar
-    artificialmente, mas que é melhor eliminar na origem. Aplicado a x/y
-    (translação + escala) e z (só escala) de pose, face e mãos; a coluna de
-    visibility da pose não é espacial e fica intacta.
-    """
-    l = vec[_LEFT_SHOULDER_IDX * 4: _LEFT_SHOULDER_IDX * 4 + 2]
-    r = vec[_RIGHT_SHOULDER_IDX * 4: _RIGHT_SHOULDER_IDX * 4 + 2]
-    cx, cy = (l[0] + r[0]) / 2.0, (l[1] + r[1]) / 2.0
-    scale = float(np.hypot(r[0] - l[0], r[1] - l[1]))
-
-    if scale < 1e-6:
-        # Ombros não detectados (pose ausente) — vetor já é zeros, mantém.
-        return vec
-
-    out = vec.copy()
-    for start, dim, stride in (
-        (0, POSE_DIM, 4),
-        (POSE_DIM, FACE_DIM, 3),
-        (POSE_DIM + FACE_DIM, HAND_DIM, 3),
-        (POSE_DIM + FACE_DIM + HAND_DIM, HAND_DIM, 3),
-    ):
-        block = out[start: start + dim].reshape(-1, stride)
-        block[:, 0] = (block[:, 0] - cx) / scale
-        block[:, 1] = (block[:, 1] - cy) / scale
-        block[:, 2] = block[:, 2] / scale
-        out[start: start + dim] = block.flatten()
-    return out
-
-
-# Índices das regiões no vetor de TOTAL_DIM dimensões
-REGION_SLICES = {
-    "pose":       (0,                              POSE_DIM),
-    "face":       (POSE_DIM,                       POSE_DIM + FACE_DIM),
-    "left_hand":  (POSE_DIM + FACE_DIM,            POSE_DIM + FACE_DIM + HAND_DIM),
-    "right_hand": (POSE_DIM + FACE_DIM + HAND_DIM, TOTAL_DIM),
-}
-
-
-# ── Normalização temporal ────────────────────────────────────
-
-def normalize_sequence(frames: np.ndarray, target: int) -> np.ndarray:
-    """
-    Garante exatamente `target` frames por sequência.
-    Mais frames: amostragem uniforme. Menos: padding com último frame.
-    """
-    if len(frames) == 0:
-        return np.zeros((target, TOTAL_DIM))
-    if len(frames) >= target:
-        idx = np.linspace(0, len(frames) - 1, target, dtype=int)
-        return frames[idx]
-    pad = np.repeat(frames[-1:], target - len(frames), axis=0)
-    return np.concatenate([frames, pad], axis=0)
 
 
 # ── Dataset V-LIBRASIL ────────────────────────────────────────

@@ -2,37 +2,16 @@
 
 import pytest
 
-# create_app registra as rotas de predição, que importam TensorFlow/MediaPipe.
+# create_app registra as rotas de predição, que importam TensorFlow.
 pytest.importorskip("tensorflow")
-pytest.importorskip("mediapipe")
 pytest.importorskip("flask_migrate")
-
-from flask_migrate import upgrade  # noqa: E402
 
 from libras.api import app as app_module  # noqa: E402
 from libras.api import create_app  # noqa: E402
 from libras.api.app import normalize_database_url  # noqa: E402
 from libras.api.extensions import db  # noqa: E402
 
-
-@pytest.fixture(autouse=True)
-def _isolated_env(monkeypatch, tmp_path):
-    """Impede que o .env real do desenvolvedor (com o Supabase) vaze para os testes."""
-    monkeypatch.setattr(app_module, "_ENV_FILE", tmp_path / "nao_existe.env")
-    monkeypatch.delenv("DATABASE_URL", raising=False)
-
-
-@pytest.fixture
-def app():
-    app = create_app({"TESTING": True, "SQLALCHEMY_DATABASE_URI": "sqlite://"})
-    with app.app_context():
-        upgrade()  # schema vem das migrações, igual à produção
-    return app
-
-
-@pytest.fixture
-def client(app):
-    return app.test_client()
+# Fixtures `app` e `client` (SQLite em memória + migrações) em conftest.py.
 
 
 def _register(client, username="maria", password="segredo123"):

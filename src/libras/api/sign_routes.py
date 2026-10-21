@@ -1,137 +1,124 @@
-"""Rotas de reconhecimento de sinais (LSTM) — /predict, /clear, /classes.
+"""Rotas de reconhecimento de sinais (LSTM) — /predict_sequence, /classes.
 
-Reaproveita libras.inference.predictor.StreamPredictor e
-libras.utils.mediapipe_holistic.extract_keypoints em vez de reimplementar
-a extração de keypoints (como o backend/app.py original fazia).
+Stateless: cada requisição traz a sequência inteira de landmarks, extraídos
+pelo MediaPipe no app/navegador (formato em docs/API_CONTRACT.md). O servidor
+monta o vetor de keypoints com `libras.features.keypoints` — mesma função do
+treino —, reamostra para o num_frames do modelo e prediz uma vez. Não há
+buffer compartilhado entre usuários, então a API roda com N workers/réplicas.
 """
 from __future__ import annotations
 
-import base64
+from dataclasses import dataclass
 
-import cv2
-import mediapipe as mp
 import numpy as np
 from flask import Blueprint, jsonify, request
+from tensorflow.keras.models import load_model
 
-from libras.config import load_config
-from libras.inference.predictor import StreamPredictor
-from libras.utils.mediapipe_holistic import extract_keypoints
+from libras.api.payloads import NoLandmarksError, PayloadError, parse_sequence_payload
+from libras.config import PATHS
+from libras.features.keypoints import FeatureBuilder, get_feature_builder, normalize_sequence
+from libras.utils.io import load_json
 
 sign_bp = Blueprint("sign", __name__)
 
-_config = load_config()
-_mp_cfg = _config.preprocess["mediapipe"]
+_TOP_K = 3
+_CONFIDENT_THRESHOLD = 0.25
 
-_holistic = mp.solutions.holistic.Holistic(
-    static_image_mode=False,
-    model_complexity=_mp_cfg["model_complexity"],
-    min_detection_confidence=_mp_cfg["detection_confidence"],
-    min_tracking_confidence=_mp_cfg["tracking_confidence"],
-)
+
+@dataclass(frozen=True)
+class _SignModel:
+    """Modelo LSTM carregado uma vez por processo — só leitura."""
+    model: object
+    classes: list[str]
+    num_frames: int
+    keypoint_dim: int
+    build_features: FeatureBuilder
+
+
+def _load_sign_model() -> _SignModel | None:
+    model_path = PATHS["models"] / "best_model.keras"
+    meta_path = PATHS["models"] / "metadata.json"
+    if not model_path.exists() or not meta_path.exists():
+        print(f"Modelo LSTM nao encontrado em {PATHS['models']}")
+        return None
+
+    meta = load_json(meta_path)
+    model = load_model(model_path)
+    # O shape de entrada do próprio modelo decide o formato do vetor
+    # (438 atual ou 1662 legado) — não depende do metadata estar em dia.
+    _, num_frames, keypoint_dim = model.input_shape
+    return _SignModel(
+        model=model,
+        classes=list(meta["classes"]),
+        num_frames=int(num_frames),
+        keypoint_dim=int(keypoint_dim),
+        build_features=get_feature_builder(int(keypoint_dim)),
+    )
+
 
 print("\n--- IA de Palavras (LSTM) ---")
 try:
-    _predictor: StreamPredictor | None = StreamPredictor()
-    print(f"Modelo LSTM carregado: {len(_predictor.classes)} classes")
-    print(f"   Classes: {_predictor.classes}")
-except FileNotFoundError as e:
-    _predictor = None
+    _sign = _load_sign_model()
+    if _sign is not None:
+        print(f"Modelo LSTM carregado: {len(_sign.classes)} classes, "
+              f"entrada ({_sign.num_frames}, {_sign.keypoint_dim})")
+        print(f"   Classes: {_sign.classes}")
+    else:
+        print("   Rota /predict_sequence ficara desativada.")
+except Exception as e:
+    _sign = None
     print(f"Erro ao carregar modelo LSTM: {e}")
-    print("   Rota /predict ficara desativada.")
-
-_last_prediction: dict | None = None
+    print("   Rota /predict_sequence ficara desativada.")
 
 
-def _decode_image(image_b64: str) -> np.ndarray | None:
-    """Decodifica base64 (com ou sem prefixo data:image/...) para array BGR."""
-    if "," in image_b64:
-        image_b64 = image_b64.split(",", 1)[1]
-    try:
-        img_bytes = base64.b64decode(image_b64)
-        nparr = np.frombuffer(img_bytes, np.uint8)
-        return cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-    except Exception:
-        return None
-
-
-@sign_bp.route("/predict", methods=["POST"])
-def predict_word():
-    global _last_prediction
-
-    if _predictor is None:
+@sign_bp.route("/predict_sequence", methods=["POST"])
+def predict_sequence():
+    if _sign is None:
         return jsonify({"error": "Modelo LSTM nao carregado."}), 503
 
-    data = request.get_json()
-    if not data or "image" not in data:
-        return jsonify({"error": "Campo image obrigatorio"}), 400
-
-    frame = _decode_image(data["image"])
-    if frame is None:
-        return jsonify({"error": "Imagem invalida ou corrompida"}), 400
-
     try:
-        rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        rgb.flags.writeable = False
-        results = _holistic.process(rgb)
+        frames = parse_sequence_payload(request.get_json(silent=True))
+    except NoLandmarksError as e:
+        return jsonify({"error": str(e)}), 422
+    except PayloadError as e:
+        return jsonify({"error": str(e)}), 400
 
-        _predictor.push(extract_keypoints(results))
-        progress = _predictor.buffer_progress
+    X = np.stack([_sign.build_features(*frame) for frame in frames])
+    X = normalize_sequence(X, _sign.num_frames).astype(np.float32)
 
-        if _predictor.is_ready:
-            # Força a predição com o buffer cheio: frames chegam isolados via
-            # HTTP, então o gate de atividade do StreamPredictor (pensado pro
-            # loop contínuo da webcam local) fica desligado aqui de propósito.
-            inp = np.expand_dims(_predictor.get_buffer_array(), axis=0)
-            probs = _predictor.model.predict(inp, verbose=0)[0]
-            top_indices = np.argsort(probs)[::-1][:3]
+    # model(...) em vez de model.predict(...): sem overhead de batching
+    # para uma única amostra e seguro para chamadas concorrentes.
+    probs = np.asarray(_sign.model(X[np.newaxis], training=False))[0]
+    top_indices = np.argsort(probs)[::-1][:_TOP_K]
 
-            predictions = [
-                {"word": _predictor.classes[idx], "confidence": float(probs[idx]), "rank": rank + 1}
-                for rank, idx in enumerate(top_indices)
-            ]
+    predictions = [
+        {"word": _sign.classes[idx], "confidence": float(probs[idx]), "rank": rank + 1}
+        for rank, idx in enumerate(top_indices)
+    ]
+    top1_confidence = float(probs[top_indices[0]])
 
-            _last_prediction = {
-                "buffer_progress": 1.0,
-                "ready": True,
-                "predictions": predictions,
-                "top1_word": _predictor.classes[top_indices[0]],
-                "top1_confidence": float(probs[top_indices[0]]),
-                "is_confident": float(probs[top_indices[0]]) >= 0.25,
-            }
-            return jsonify(_last_prediction)
-
-        return jsonify({
-            "buffer_progress": progress,
-            "ready": False,
-            "predictions": _last_prediction["predictions"] if _last_prediction else None,
-        })
-
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-
-@sign_bp.route("/clear", methods=["POST"])
-def clear_buffer():
-    global _last_prediction
-    if _predictor is not None:
-        _predictor.clear()
-    _last_prediction = None
-    return jsonify({"status": "ok", "message": "Buffer limpo"})
+    return jsonify({
+        "predictions": predictions,
+        "top1_word": _sign.classes[top_indices[0]],
+        "top1_confidence": top1_confidence,
+        "is_confident": top1_confidence >= _CONFIDENT_THRESHOLD,
+        "frames_received": len(frames),
+    })
 
 
 @sign_bp.route("/classes", methods=["GET"])
 def get_classes():
-    classes = _predictor.classes if _predictor is not None else []
+    classes = _sign.classes if _sign is not None else []
     return jsonify({"classes": classes, "num_classes": len(classes)})
 
 
 def is_loaded() -> bool:
-    return _predictor is not None
+    return _sign is not None
 
 
 def num_classes() -> int:
-    return len(_predictor.classes) if _predictor is not None else 0
+    return len(_sign.classes) if _sign is not None else 0
 
 
-def buffer_size() -> int:
-    return len(_predictor.buffer) if _predictor is not None else 0
+def keypoint_dim() -> int | None:
+    return _sign.keypoint_dim if _sign is not None else None

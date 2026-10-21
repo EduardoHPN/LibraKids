@@ -71,6 +71,11 @@ def create_app(test_config: dict[str, Any] | None = None) -> Flask:
     # pool_pre_ping descarta conexões que o pooler do Supabase já fechou;
     # pool_recycle renova antes do timeout de inatividade do servidor.
     app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {"pool_pre_ping": True, "pool_recycle": 300}
+    # Sequências de landmarks (até MAX_FRAMES frames) cabem com folga em 2 MB;
+    # acima disso o Flask responde 413 antes de ler o corpo.
+    app.config["MAX_CONTENT_LENGTH"] = 2 * 1024 * 1024
+    # /record_data grava em disco — efêmero no container. Desligada por padrão.
+    app.config["ENABLE_RECORD_DATA"] = os.environ.get("LIBRAS_ENABLE_RECORD_DATA") == "1"
 
     if test_config is None or "SQLALCHEMY_DATABASE_URI" not in test_config:
         app.config["SQLALCHEMY_DATABASE_URI"] = _default_database_uri(app)
@@ -99,6 +104,17 @@ def create_app(test_config: dict[str, Any] | None = None) -> Flask:
     app.register_blueprint(sign_bp)
     app.register_blueprint(letter_bp)
 
+    if app.config["ENABLE_RECORD_DATA"]:
+        # Import tardio: é o único módulo que precisa de MediaPipe/OpenCV.
+        from libras.api.record_routes import record_bp
+
+        app.register_blueprint(record_bp)
+
+    @app.errorhandler(413)
+    def payload_too_large(_error):
+        limit_mb = app.config["MAX_CONTENT_LENGTH"] / (1024 * 1024)
+        return jsonify({"error": f"Corpo da requisicao maior que {limit_mb:g} MB."}), 413
+
     @app.route("/health", methods=["GET"])
     def health():
         from libras.api import letter_routes, sign_routes
@@ -107,9 +123,10 @@ def create_app(test_config: dict[str, Any] | None = None) -> Flask:
             "status": "ok",
             "lstm_loaded": sign_routes.is_loaded(),
             "lstm_classes": sign_routes.num_classes(),
+            "lstm_keypoint_dim": sign_routes.keypoint_dim(),
             "letter_loaded": letter_routes.is_loaded(),
             "letter_classes": letter_routes.num_classes(),
-            "buffer_size": sign_routes.buffer_size(),
+            "record_data_enabled": app.config["ENABLE_RECORD_DATA"],
         })
 
     return app

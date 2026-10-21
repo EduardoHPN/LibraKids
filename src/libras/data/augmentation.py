@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import numpy as np
 
-from libras.utils.mediapipe_holistic import FACE_DIM, HAND_DIM, POSE_DIM
+from libras.features.keypoints import FACE_DIM, HAND_DIM, POSE_DIM
 
 
 def add_gaussian_noise(seq: np.ndarray, std: float = 0.01) -> np.ndarray:

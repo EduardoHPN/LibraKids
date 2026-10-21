@@ -1,0 +1,189 @@
+# Contrato da API de reconhecimento (app mobile e Angular)
+
+O MediaPipe roda **no cliente** (celular ou navegador). O cliente envia os
+**landmarks brutos**, sem normalizar, e o servidor faz todo o
+pré-processamento: seleção do subconjunto da face, `normalize_spatial` e
+`normalize_sequence`. Assim existe uma única fonte de verdade
+(`src/libras/features/keypoints.py`), a mesma usada no treino.
+
+As rotas são **stateless**: cada requisição traz tudo o que é preciso.
+Nenhum estado fica no servidor entre chamadas.
+
+> Autenticação: hoje as rotas de predição são públicas. A partir da Fase 4
+> elas vão exigir `Authorization: Bearer <token>` (obtido em `/login`).
+
+---
+
+## Convenções dos landmarks
+
+| Campo | Pontos | Coordenadas por ponto | Observação |
+|---|---|---|---|
+| `pose` | 33 | `[x, y, z, visibility]` | topologia do MediaPipe Pose |
+| `face` | 468 **ou** 478 | `[x, y, z]` | malha completa; com 478 (Tasks, com íris) o servidor usa os 468 primeiros |
+| `left_hand` | 21 | `[x, y, z]` | mão **esquerda do sinalizador** |
+| `right_hand` | 21 | `[x, y, z]` | mão **direita do sinalizador** |
+| `hand` (letras) | 21 | `[x, y]` ou `[x, y, z]` | o modelo de letras usa só `x, y` |
+
+- **Coordenadas normalizadas pela imagem.** `x` vai de 0 a 1 pela largura e
+  `y` de 0 a 1 pela altura, com origem no canto superior esquerdo. `z` e
+  `visibility` são enviados exatamente como o MediaPipe devolve. Pontos fora
+  do quadro podem ter valores um pouco abaixo de 0 ou acima de 1, e isso é
+  normal.
+- **Parte não detectada → `null`.** O servidor preenche com zeros, igual ao
+  treino. Também vale omitir o campo.
+- **Use a imagem NÃO espelhada.** Os vídeos de treino foram gravados sem
+  espelhar (`scripts/06_record_dataset.py` grava o frame original e só
+  espelha a pré-visualização). Rode o MediaPipe no frame como a câmera o
+  entrega e espelhe **apenas o preview** mostrado ao usuário.
+  - Se a plataforma só fornecer o frame espelhado (comum na câmera frontal),
+    desespelhe a imagem antes do MediaPipe. Converter os landmarks depois
+    exige `x → 1 - x`, trocar `left_hand ↔ right_hand` **e** trocar os pares
+    esquerda/direita da pose. Evite isso.
+- **Esquerda/direita = do sinalizador.** É a convenção do Holistic: o ombro
+  esquerdo é o ponto 11 da pose, e `left_hand` é a mão do mesmo lado. Num
+  frame não espelhado da câmera frontal, a mão esquerda do sinalizador
+  aparece do lado **direito** da imagem (x maior).
+- **Números finitos** (sem `NaN`/`Infinity`). Arredondar para 4 casas
+  decimais é suficiente (1/10000 da imagem) e reduz bastante o payload.
+
+---
+
+## `POST /predict_sequence`: reconhecimento de palavras
+
+Corpo:
+
+```json
+{
+  "frames": [
+    {
+      "pose":       [[0.61, 0.55, -0.21, 0.99], "... 33 pontos"],
+      "face":       [[0.50, 0.31, -0.01], "... 468 ou 478 pontos"],
+      "left_hand":  null,
+      "right_hand": [[0.38, 0.62, -0.08], "... 21 pontos"]
+    }
+  ]
+}
+```
+
+Limites:
+
+| Regra | Valor |
+|---|---|
+| Frames por requisição | **10 a 60** |
+| Tamanho máximo do corpo | **2 MB** (60 frames com 4 casas decimais ≈ 0,8 MB) |
+| Mãos | pelo menos um frame com `left_hand` ou `right_hand` |
+
+**Recomendação de captura.** Capture cerca de 30 frames por segundo durante
+o sinal, de 1 a 2 s. O servidor reamostra uniformemente para os 30 frames do
+modelo (`num_frames`). Mande a sequência quando completar 30 frames ou quando
+o usuário terminar o sinal, e não a cada frame. Exemplo completo:
+`tests/fixtures/predict_sequence.json`.
+
+Resposta `200`:
+
+```json
+{
+  "predictions": [
+    {"word": "Obrigado", "confidence": 0.91, "rank": 1},
+    {"word": "Oi",       "confidence": 0.05, "rank": 2},
+    {"word": "Sim",      "confidence": 0.02, "rank": 3}
+  ],
+  "top1_word": "Obrigado",
+  "top1_confidence": 0.91,
+  "is_confident": true,
+  "frames_received": 30
+}
+```
+
+`is_confident` vale `true` quando `top1_confidence >= 0.25`. A lista de
+palavras que o modelo conhece vem de `GET /classes`.
+
+Erros (sempre `{"error": "<mensagem>"}`):
+
+| Status | Quando |
+|---|---|
+| 400 | JSON inválido, `frames` fora dos limites, ponto com shape/tipo errado (a mensagem diz qual frame e campo) |
+| 413 | corpo maior que 2 MB |
+| 422 | payload válido, mas nenhuma mão detectada em nenhum frame |
+| 503 | modelo LSTM não carregado no servidor |
+
+---
+
+## `POST /predict_letter_landmarks`: reconhecimento de letras
+
+Corpo, com um único frame da primeira mão detectada:
+
+```json
+{ "hand": [[0.42, 0.61], "... 21 pontos"], "target_letter": "A" }
+```
+
+`hand: null` indica que nenhuma mão foi detectada. A resposta é `200` com
+`correct: false` e `predicted_letter: "Nenhuma mao detectada"`.
+
+Resposta `200`:
+
+```json
+{
+  "success": true,
+  "correct": true,
+  "predicted_letter": "A",
+  "target_letter": "A",
+  "box": [0.31, 0.42, 0.55, 0.80],
+  "confidence": 0.97,
+  "message": "Gesto Correto!"
+}
+```
+
+- `box` é `[x_min, y_min, x_max, y_max]` da mão em **coordenadas
+  normalizadas** (0–1). A antiga `/predict_letter` devolvia o box em pixels.
+- Confiança abaixo de 0,8 → `predicted_letter: "Movimento Invalido"`.
+
+Erros (sempre `{"success": false, "message": "<mensagem>"}`): `400` para
+payload inválido e `503` para modelo de letras não carregado.
+
+---
+
+## Mapeamento a partir do MediaPipe Tasks
+
+O modelo foi treinado com o **Holistic legado** (Python `mediapipe==0.10.9`).
+Os SDKs atuais usam o MediaPipe **Tasks**:
+
+| Tasks | Campo do contrato |
+|---|---|
+| `HolisticLandmarker`: `poseLandmarks[0]` | `pose`, com `[x, y, z, visibility]` de cada landmark |
+| `HolisticLandmarker`: `faceLandmarks[0]` (478 pontos) | `face` (pode enviar os 478) |
+| `HolisticLandmarker`: `leftHandLandmarks[0]` / `rightHandLandmarks[0]` | `left_hand` / `right_hand` |
+| `HandLandmarker`: `landmarks[0]` | `hand` (letras) |
+| lista vazia (nada detectado) | `null` |
+
+- **Web (Angular).** `@mediapipe/tasks-vision` tem `HolisticLandmarker`, e
+  cada landmark já traz `visibility`.
+- **Plataformas sem `HolisticLandmarker`** (até onde se sabe, iOS; confirmar
+  no 2.4). Combine `PoseLandmarker` + `FaceLandmarker` + `HandLandmarker`. O
+  rótulo de lateralidade do `HandLandmarker` assume imagem espelhada, então
+  **não confie nele**. Atribua cada mão ao punho mais próximo da pose (ponto
+  15 = punho esquerdo, 16 = punho direito).
+- **`visibility` ausente** (algumas plataformas devolvem como opcional).
+  Isso precisa ser medido na validação numérica abaixo antes de definir um
+  valor padrão.
+
+## Formato do vetor no servidor
+
+O servidor monta o vetor no formato que o modelo carregado espera, lido do
+shape de entrada de `best_model.keras` e exposto em `GET /health` como
+`lstm_keypoint_dim`:
+
+| `lstm_keypoint_dim` | Formato |
+|---|---|
+| 1662 | legado: face completa (468), **sem** normalização espacial. É o modelo versionado hoje. |
+| 438 | atual: face reduzida a lábios + sobrancelhas, **com** `normalize_spatial`. Vale após retreinar. |
+
+Para o cliente o contrato é o mesmo nos dois casos.
+
+## Pendências
+
+- [ ] **Validação numérica (passo 2.2.2).** Comparar os vetores e a acurácia
+      do LSTM entre o Holistic legado e o MediaPipe Tasks (mesmos `.task` do
+      app) em vídeos do dataset. Precisa ser feita antes de integrar o
+      MediaPipe no app.
+- [ ] Retreinar o LSTM no formato de 438 dimensões.

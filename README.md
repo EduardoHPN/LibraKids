@@ -86,6 +86,13 @@ python scripts/migrate_sqlite_to_postgres.py --dry-run   # só mostra
 python scripts/migrate_sqlite_to_postgres.py
 ```
 
+**Rotas de predição.** O MediaPipe roda no cliente (app ou navegador), que
+envia só landmarks para `POST /predict_sequence` (palavras) e
+`POST /predict_letter_landmarks` (letras). As rotas são stateless. O formato
+dos payloads está em [`docs/API_CONTRACT.md`](docs/API_CONTRACT.md). A rota
+de coleta `/record_data`, que grava imagens em disco e usa MediaPipe no
+servidor, só é registrada com `LIBRAS_ENABLE_RECORD_DATA=1`.
+
 **Observações sobre o Supabase**
 
 - Use a connection string do **Session pooler**: host `*.pooler.supabase.com`,
