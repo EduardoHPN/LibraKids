@@ -5,7 +5,14 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { LibrasService, Prediction } from '../../../services/libras.service';
+import { LibrasService, Prediction, SequenceFrame } from '../../../services/libras.service';
+import { MediapipeService } from '../../../services/mediapipe.service';
+
+// Janela enviada ao servidor = num_frames do modelo (30 ≈ 1 s de vídeo).
+const WINDOW_FRAMES = 30;
+// Com a janela cheia, nova predição a cada STRIDE_FRAMES frames novos
+// (janela deslizante) — uma requisição por ~1/3 s, não uma por frame.
+const STRIDE_FRAMES = 10;
 
 @Component({
   selector: 'app-word-practice',
@@ -22,8 +29,7 @@ import { LibrasService, Prediction } from '../../../services/libras.service';
   styleUrls: ['./word-practice-component.scss']
 })
 export class WordPracticeComponent implements OnInit, OnDestroy {
-  @ViewChild('videoElement') videoElement!: ElementRef;
-  @ViewChild('canvasElement') canvasElement!: ElementRef;
+  @ViewChild('videoElement') videoElement!: ElementRef<HTMLVideoElement>;
 
   videoStream!: MediaStream;
   videoWidth = 640;
@@ -35,15 +41,24 @@ export class WordPracticeComponent implements OnInit, OnDestroy {
   bufferProgress = 0;
   isReady = false;
   isCorrect = false;
-  isLoading = false;
-  feedbackMessage = 'Posicione-se na frente da câmera e faça o sinal.';
+  isLoading = true;
+  feedbackMessage = 'Carregando o reconhecimento de sinais...';
   history: string[] = [];
   score = 0;
 
-  processingInterval: any;
-  private isProcessing = false;
+  // Buffer de frames fica no navegador; o servidor é stateless.
+  private frames: SequenceFrame[] = [];
+  private framesSinceRequest = 0;
+  private requestInFlight = false;
+  private detecting = false;
+  private lastVideoTime = -1;
+  private animationFrameId?: number;
+  private destroyed = false;
 
-  constructor(private librasService: LibrasService) {}
+  constructor(
+    private librasService: LibrasService,
+    private mediapipe: MediapipeService,
+  ) {}
 
   ngOnInit(): void {
     this.loadClasses();
@@ -51,15 +66,16 @@ export class WordPracticeComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
-    this.stopWebcam();
-    if (this.processingInterval) {
-      clearInterval(this.processingInterval);
+    this.destroyed = true;
+    if (this.animationFrameId !== undefined) {
+      cancelAnimationFrame(this.animationFrameId);
     }
+    this.stopWebcam();
   }
 
   loadClasses(): void {
     this.librasService.getClasses().subscribe({
-      next: (response: any) => {
+      next: (response) => {
         this.availableWords = response.classes;
         this.selectRandomWord();
       },
@@ -74,15 +90,20 @@ export class WordPracticeComponent implements OnInit, OnDestroy {
 
   startWebcam(): void {
     navigator.mediaDevices.getUserMedia({ video: true })
-      .then(stream => {
+      .then(async stream => {
         this.videoStream = stream;
-        this.videoElement.nativeElement.srcObject = stream;
-        this.videoElement.nativeElement.play();
-        setTimeout(() => this.startProcessing(), 1000);
+        const video = this.videoElement.nativeElement;
+        video.srcObject = stream;
+        await video.play();
+        await this.mediapipe.getHolistic();
+        this.isLoading = false;
+        this.feedbackMessage = `Faça o sinal de "${this.targetWord}"`;
+        this.processLoop();
       })
       .catch(err => {
-        console.error('Erro ao acessar a webcam:', err);
-        this.feedbackMessage = 'Erro ao acessar a webcam. Verifique as permissões.';
+        console.error('Erro ao iniciar a câmera ou o MediaPipe:', err);
+        this.isLoading = false;
+        this.feedbackMessage = 'Erro ao acessar a webcam ou carregar o reconhecimento.';
       });
   }
 
@@ -98,60 +119,77 @@ export class WordPracticeComponent implements OnInit, OnDestroy {
     this.targetWord = this.availableWords[randomIndex];
     this.predictions = null;
     this.isCorrect = false;
+    this.resetBuffer();
+    if (!this.isLoading) {
+      this.feedbackMessage = `Faça o sinal de "${this.targetWord}"`;
+    }
+  }
+
+  private resetBuffer(): void {
+    this.frames = [];
+    this.framesSinceRequest = 0;
     this.isReady = false;
     this.bufferProgress = 0;
-    this.feedbackMessage = `Faça o sinal de "${this.targetWord}"`;
-    this.librasService.clearBuffer().subscribe();
   }
 
-  startProcessing(): void {
-    if (this.processingInterval) clearInterval(this.processingInterval);
-    this.processingInterval = setInterval(() => this.sendFrame(), 100);
+  /** Um detectForVideo por frame novo do vídeo. */
+  private processLoop = (): void => {
+    if (this.destroyed) return;
+    this.animationFrameId = requestAnimationFrame(this.processLoop);
+
+    const video = this.videoElement?.nativeElement;
+    if (!video || video.readyState < 2 || video.currentTime === this.lastVideoTime) return;
+    if (this.detecting || this.isCorrect) return;
+
+    this.lastVideoTime = video.currentTime;
+    this.detecting = true;
+    this.mediapipe.detectFrame(video, performance.now())
+      .then(frame => this.pushFrame(frame))
+      .catch(err => console.error('Erro no MediaPipe:', err))
+      .finally(() => this.detecting = false);
+  };
+
+  private pushFrame(frame: SequenceFrame): void {
+    this.frames.push(frame);
+    if (this.frames.length > WINDOW_FRAMES) this.frames.shift();
+    this.framesSinceRequest++;
+
+    this.bufferProgress = (this.frames.length / WINDOW_FRAMES) * 100;
+    this.isReady = this.frames.length === WINDOW_FRAMES;
+
+    if (this.isReady && this.framesSinceRequest >= STRIDE_FRAMES && !this.requestInFlight) {
+      // Sem mão em nenhum frame não há sinal para classificar (servidor daria 422).
+      if (this.frames.some(f => f.left_hand || f.right_hand)) {
+        this.sendWindow([...this.frames]);
+      }
+    }
   }
 
-  sendFrame(): void {
-    if (this.isProcessing || this.isCorrect) return;
-    if (!this.videoElement?.nativeElement?.srcObject) return;
+  private sendWindow(frames: SequenceFrame[]): void {
+    this.requestInFlight = true;
+    this.framesSinceRequest = 0;
+    const word = this.targetWord;
 
-    this.isProcessing = true;
+    this.librasService.predictSequence(frames).subscribe({
+      next: (response) => {
+        this.requestInFlight = false;
+        if (word !== this.targetWord || this.isCorrect) return;  // palavra trocou no meio
 
-    const video = this.videoElement.nativeElement;
-    const canvas = this.canvasElement.nativeElement;
-    const context = canvas.getContext('2d');
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    context.clearRect(0, 0, canvas.width, canvas.height);
-    context.drawImage(video, 0, 0, canvas.width, canvas.height);
-    const imageDataUrl = canvas.toDataURL('image/jpeg', 0.7);
-
-    this.librasService.predict(imageDataUrl).subscribe({
-      next: (response: any) => {
-        this.bufferProgress = response.buffer_progress * 100;
-        this.isReady = response.ready;
-
-        if (response.predictions) {
-          this.predictions = response.predictions;
-
-          const top1 = response.predictions[0];
-          if (top1 && top1.word === this.targetWord && top1.confidence > 0.3) {
-            this.isCorrect = true;
-            this.score++;
-            this.history.push(this.targetWord);
-            this.feedbackMessage = `🎉 Correto! Você fez "${this.targetWord}"!`;
-            setTimeout(() => this.selectRandomWord(), 2500);
-          } else {
-            const inTop3 = response.predictions.some((p: any) => p.word === this.targetWord);
-            if (inTop3 && response.ready) {
-              this.feedbackMessage = `Quase! "${this.targetWord}" está entre as opções.`;
-            }
-          }
+        this.predictions = response.predictions;
+        const top1 = response.predictions[0];
+        if (top1 && top1.word === this.targetWord && top1.confidence > 0.3) {
+          this.isCorrect = true;
+          this.score++;
+          this.history.push(this.targetWord);
+          this.feedbackMessage = `🎉 Correto! Você fez "${this.targetWord}"!`;
+          setTimeout(() => this.selectRandomWord(), 2500);
+        } else if (response.predictions.some(p => p.word === this.targetWord)) {
+          this.feedbackMessage = `Quase! "${this.targetWord}" está entre as opções.`;
         }
-
-        this.isProcessing = false;
       },
       error: (_err: any) => {
+        this.requestInFlight = false;
         this.feedbackMessage = 'Erro na conexão com o servidor.';
-        this.isProcessing = false;
       }
     });
   }

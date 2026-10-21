@@ -33,6 +33,11 @@
                 "glob": "**/*",
                 "input": "src/assets",
                 "output": "/assets/"
+              },
+              {
+                "glob": "*.{js,wasm}",
+                "input": "node_modules/@mediapipe/tasks-vision/wasm",
+                "output": "/mediapipe/wasm/"
               }
             ],
             "styles": [

@@ -1,8 +1,7 @@
 <div class="main-container">
   <mat-card class="app-card webcam-card">
     <div class="webcam-frame">
-      <video #videoElement class="webcam-video" autoplay muted></video>
-      <canvas #canvasElement style="display: none;"></canvas>
+      <video #videoElement class="webcam-video" autoplay muted playsinline></video>
       <div class="buffer-bar">
         <mat-progress-bar
           mode="determinate"

@@ -30,10 +30,7 @@ export class AuthService {
   }
 
 // --- Rotas de IA ---
-  predictLetter(data: any): Observable<any> {
-    return this.http.post(`${this.baseUrl}/predict_letter`, data, { withCredentials: true });
-  }
-
+  // (predição de letras/palavras fica no LibrasService, com landmarks)
   recordData(data: any): Observable<any> {
     return this.http.post(`${this.baseUrl}/record_data`, data, { withCredentials: true });
   }

@@ -1,8 +1,7 @@
 <div class="main-container">
   <mat-card class="app-card webcam-card">
     <div class="webcam-frame">
-      <video #videoElement class="webcam-video" autoplay muted></video>
-      <canvas #canvasElement style="display: none;"></canvas>
+      <video #videoElement class="webcam-video" autoplay muted playsinline></video>
     </div>
   </mat-card>
   
@@ -30,11 +29,11 @@
           <mat-icon class="info-icon" color="primary">forum</mat-icon>
           <p class="feedback-text">{{ predictionResult?.message || 'Aguardando seu gesto...' }}</p>
         </div>
-        <div class="info-item" *ngIf="predictionResult">
+        <div class="info-item" *ngIf="predictionResult?.confidence != null">
           <mat-icon class="info-icon" color="primary">insights</mat-icon>
           <div>
-            <p class="confidence-text">Previsão: {{ predictionResult.predicted_letter }}</p>
-            <p class="confidence-text">Confiança: {{ (predictionResult.confidence * 100).toFixed(2) }}%</p>
+            <p class="confidence-text">Previsão: {{ predictionResult?.predicted_letter }}</p>
+            <p class="confidence-text">Confiança: {{ (predictionResult!.confidence! * 100).toFixed(2) }}%</p>
           </div>
         </div>
       </mat-card-content>
