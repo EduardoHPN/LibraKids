@@ -14,13 +14,13 @@ from libras.config import PATHS
 from libras.utils.io import load_json
 
 
-def build_compatible_model(num_classes: int) -> Sequential:
+def build_compatible_model(num_classes: int, num_frames: int, keypoint_dim: int) -> Sequential:
     """Reproduz EXATAMENTE a arquitetura do Colab."""
     model = Sequential([
         Bidirectional(
             LSTM(64, return_sequences=True, activation='tanh',
                  recurrent_dropout=0.2),
-            input_shape=(30, 1662),
+            input_shape=(num_frames, keypoint_dim),
         ),
         BatchNormalization(),
         Dropout(0.5),
@@ -52,14 +52,17 @@ def main() -> None:
     # Carrega metadata
     meta = load_json(models_dir / "metadata.json")
     num_classes = meta["num_classes"]
-    print(f"Classes: {num_classes}")
+    # Formato de entrada vem do metadata.json do Colab (1662, 438 ou 405).
+    num_frames = meta.get("num_frames", 30)
+    keypoint_dim = meta.get("keypoint_dim", 1662)
+    print(f"Classes: {num_classes} | entrada: ({num_frames}, {keypoint_dim})")
 
     # Reconstrói arquitetura
     print("\n🔧 Reconstruindo arquitetura local...")
-    model = build_compatible_model(num_classes)
+    model = build_compatible_model(num_classes, num_frames, keypoint_dim)
 
     # Build para inicializar os pesos
-    dummy = np.zeros((1, 30, 1662), dtype=np.float32)
+    dummy = np.zeros((1, num_frames, keypoint_dim), dtype=np.float32)
     _ = model(dummy)
 
     # Lista layers locais que têm pesos

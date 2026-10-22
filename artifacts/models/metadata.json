@@ -14,10 +14,10 @@
   ],
   "num_classes": 11,
   "num_frames": 30,
-  "keypoint_dim": 1662,
+  "keypoint_dim": 405,
   "threshold": 0.7,
-  "test_accuracy": 0.8382352941176471,
+  "test_accuracy": 0.8970588235294118,
   "test_top3": 0.970588207244873,
-  "epochs_trained": 131,
-  "best_val_acc": 0.8529411554336548
+  "epochs_trained": 95,
+  "best_val_acc": 0.8676470518112183
 }
