@@ -8,11 +8,15 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { LibrasService, Prediction, SequenceFrame } from '../../../services/libras.service';
 import { MediapipeService } from '../../../services/mediapipe.service';
 
-// Janela enviada ao servidor = num_frames do modelo (30 ≈ 1 s de vídeo).
+// Mesmo ritmo do treino: os clipes têm ~4 s e são reamostrados para 30
+// frames (≈ 7,5 fps). Amostrar mais rápido encurtaria a janela no tempo e o
+// sinal chegaria "acelerado" ao modelo.
+const SAMPLE_INTERVAL_MS = 1000 / 7.5;
+// Janela enviada ao servidor = num_frames do modelo (30 frames ≈ 4 s).
 const WINDOW_FRAMES = 30;
 // Com a janela cheia, nova predição a cada STRIDE_FRAMES frames novos
-// (janela deslizante) — uma requisição por ~1/3 s, não uma por frame.
-const STRIDE_FRAMES = 10;
+// (janela deslizante) — uma requisição por ~1 s, não uma por frame.
+const STRIDE_FRAMES = 8;
 
 @Component({
   selector: 'app-word-practice',
@@ -51,7 +55,7 @@ export class WordPracticeComponent implements OnInit, OnDestroy {
   private framesSinceRequest = 0;
   private requestInFlight = false;
   private detecting = false;
-  private lastVideoTime = -1;
+  private lastSampleAt = -Infinity;
   private animationFrameId?: number;
   private destroyed = false;
 
@@ -132,18 +136,19 @@ export class WordPracticeComponent implements OnInit, OnDestroy {
     this.bufferProgress = 0;
   }
 
-  /** Um detectForVideo por frame novo do vídeo. */
+  /** Um detectForVideo a cada SAMPLE_INTERVAL_MS (ritmo do treino). */
   private processLoop = (): void => {
     if (this.destroyed) return;
     this.animationFrameId = requestAnimationFrame(this.processLoop);
 
     const video = this.videoElement?.nativeElement;
-    if (!video || video.readyState < 2 || video.currentTime === this.lastVideoTime) return;
+    const now = performance.now();
+    if (!video || video.readyState < 2 || now - this.lastSampleAt < SAMPLE_INTERVAL_MS) return;
     if (this.detecting || this.isCorrect) return;
 
-    this.lastVideoTime = video.currentTime;
+    this.lastSampleAt = now;
     this.detecting = true;
-    this.mediapipe.detectFrame(video, performance.now())
+    this.mediapipe.detectFrame(video, now)
       .then(frame => this.pushFrame(frame))
       .catch(err => console.error('Erro no MediaPipe:', err))
       .finally(() => this.detecting = false);

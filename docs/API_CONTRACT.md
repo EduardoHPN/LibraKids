@@ -73,11 +73,19 @@ Limites:
 | Tamanho máximo do corpo | **2 MB** (60 frames com 4 casas decimais ≈ 0,8 MB) |
 | Mãos | pelo menos um frame com `left_hand` ou `right_hand` |
 
-**Recomendação de captura.** Capture cerca de 30 frames por segundo durante
-o sinal, de 1 a 2 s. O servidor reamostra uniformemente para os 30 frames do
-modelo (`num_frames`). Mande a sequência quando completar 30 frames ou quando
-o usuário terminar o sinal, e não a cada frame. Exemplo completo:
-`tests/fixtures/predict_sequence.json`.
+**Recomendação de captura: a sequência deve cobrir cerca de 4 s, a duração
+dos clipes de treino.** No treino, cada clipe de 4 s a 30 fps é reamostrado
+para 30 frames, o que dá cerca de **7,5 fps**. O servidor também reamostra
+uniformemente para os 30 frames do modelo (`num_frames`), então o que importa
+é o **tempo coberto**, não a taxa de captura. 30 frames capturados a 30 fps
+cobrem só 1 s e chegam ao modelo como um sinal 4 vezes mais rápido.
+
+- **Recomendado:** amostrar 1 frame a cada ~133 ms (7,5 fps) e enviar
+  janelas de 30 frames (4 s), igual ao treino.
+- **Alternativa:** 15 fps com janelas de 60 frames (também 4 s).
+- Com janela deslizante, envie de novo a cada ~1 s, e não a cada frame.
+
+Exemplo completo: `tests/fixtures/predict_sequence.json`.
 
 Resposta `200`:
 
@@ -156,13 +164,14 @@ Os SDKs atuais usam o MediaPipe **Tasks**:
 | `HandLandmarker`: `landmarks[0]` | `hand` (letras) |
 | lista vazia (nada detectado) | `null` |
 
-- **Web (Angular).** `@mediapipe/tasks-vision` tem `HolisticLandmarker`, e
-  cada landmark já traz `visibility`.
-- **Plataformas sem `HolisticLandmarker`** (até onde se sabe, iOS; confirmar
-  no 2.4). Combine `PoseLandmarker` + `FaceLandmarker` + `HandLandmarker`. O
-  rótulo de lateralidade do `HandLandmarker` assume imagem espelhada, então
-  **não confie nele**. Atribua cada mão ao punho mais próximo da pose (ponto
-  15 = punho esquerdo, 16 = punho direito).
+- **Web, Android e iOS.** Todos têm `HolisticLandmarker` no MediaPipe Tasks
+  (`@mediapipe/tasks-vision`, `com.google.mediapipe:tasks-vision`, pod
+  `MediaPipeTasksVision`), e cada landmark traz `visibility`. Prefira o
+  Holistic.
+- **Se for preciso combinar** `PoseLandmarker` + `FaceLandmarker` +
+  `HandLandmarker`: o rótulo de lateralidade do `HandLandmarker` assume
+  imagem espelhada, então **não confie nele**. Atribua cada mão ao punho mais
+  próximo da pose (ponto 15 = punho esquerdo, 16 = punho direito).
 - **`visibility`.** O `HolisticLandmarker` sempre devolve esse valor (0% de
   ausência na validação), e ele fica próximo do legado. Envie como vem.
 
