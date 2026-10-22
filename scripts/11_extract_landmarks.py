@@ -183,6 +183,8 @@ def main() -> None:
             failed += 1
             print(f"  falhou: {video}")
             continue
+        data["backend"] = np.array(args.backend)
+        data["mediapipe_version"] = np.array(mp.__version__)
         target.parent.mkdir(parents=True, exist_ok=True)
         np.savez_compressed(target, **data)
         done += 1

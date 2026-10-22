@@ -14,7 +14,8 @@ pytest.importorskip("flask_migrate")
 from libras.api import letter_routes, sign_routes  # noqa: E402
 from libras.api.payloads import MAX_FRAMES, MIN_FRAMES  # noqa: E402
 from libras.features.keypoints import (  # noqa: E402
-    LEGACY_TOTAL_DIM, TOTAL_DIM, keypoints_from_arrays, keypoints_from_arrays_legacy,
+    LEGACY_TOTAL_DIM, NO_POSE_Z_TOTAL_DIM, TOTAL_DIM, keypoints_from_arrays,
+    keypoints_from_arrays_legacy, keypoints_from_arrays_no_pose_z,
 )
 
 FIXTURE = Path(__file__).parent / "fixtures" / "predict_sequence.json"
@@ -135,10 +136,11 @@ class TestPredictSequenceInvalid:
 
 
 class TestSignModelLoading:
-    """O formato do vetor (438 ou 1662) vem do shape de entrada do modelo."""
+    """O formato do vetor (438, 405 ou 1662) vem do shape de entrada do modelo."""
 
     @pytest.mark.parametrize("dim, builder", [
         (TOTAL_DIM, keypoints_from_arrays),
+        (NO_POSE_Z_TOTAL_DIM, keypoints_from_arrays_no_pose_z),
         (LEGACY_TOTAL_DIM, keypoints_from_arrays_legacy),
     ])
     def test_builder_follows_model_input(self, tmp_path, monkeypatch, dim, builder):
@@ -246,7 +248,7 @@ def test_health(client):
     assert body["record_data_enabled"] is False
     assert "buffer_size" not in body
     if body["lstm_loaded"]:
-        assert body["lstm_keypoint_dim"] in (TOTAL_DIM, LEGACY_TOTAL_DIM)
+        assert body["lstm_keypoint_dim"] in (TOTAL_DIM, NO_POSE_Z_TOTAL_DIM, LEGACY_TOTAL_DIM)
 
 
 def test_api_does_not_import_mediapipe_or_cv2():

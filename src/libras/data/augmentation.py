@@ -14,7 +14,12 @@ from __future__ import annotations
 
 import numpy as np
 
-from libras.features.keypoints import FACE_DIM, HAND_DIM, POSE_DIM
+from libras.features.keypoints import (
+    FACE_DIM, HAND_DIM, NO_POSE_Z_TOTAL_DIM, POSE_POINTS, TOTAL_DIM,
+)
+
+# Colunas por ponto da pose em cada formato: (x, y, z, vis) ou (x, y, vis).
+_POSE_COLS = {TOTAL_DIM: 4, NO_POSE_Z_TOTAL_DIM: 3}
 
 
 def add_gaussian_noise(seq: np.ndarray, std: float = 0.01) -> np.ndarray:
@@ -51,9 +56,13 @@ def spatial_jitter(seq: np.ndarray, max_shift: float = 0.02) -> np.ndarray:
     shift_x = np.random.uniform(-max_shift, max_shift)
     shift_y = np.random.uniform(-max_shift, max_shift)
 
-    # Estrutura: pose (x,y,z,vis) + face (x,y,z) + mão esq/dir (x,y,z cada).
-    # Apenas x e y são deslocados; z e visibility ficam intactos.
-    pose_shift = np.tile([shift_x, shift_y, 0.0, 0.0], POSE_DIM // 4)
+    # Estrutura: pose (x,y,z,vis — ou x,y,vis sem o z) + face (x,y,z) + mão
+    # esq/dir (x,y,z cada). Apenas x e y são deslocados; z e visibility ficam intactos.
+    dim = seq.shape[-1]
+    if dim not in _POSE_COLS:
+        raise ValueError(f"spatial_jitter: dimensao {dim} nao suportada ({sorted(_POSE_COLS)})")
+    pose_cols = _POSE_COLS[dim]
+    pose_shift = np.tile([shift_x, shift_y] + [0.0] * (pose_cols - 2), POSE_POINTS)
     face_shift = np.tile([shift_x, shift_y, 0.0], FACE_DIM // 3)
     hand_shift = np.tile([shift_x, shift_y, 0.0], HAND_DIM // 3)
     shift_vec = np.concatenate([pose_shift, face_shift, hand_shift, hand_shift])

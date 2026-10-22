@@ -5,9 +5,12 @@ Este módulo NÃO importa cv2 nem mediapipe: é usado pela API (que recebe os
 landmarks já extraídos pelo app/navegador) e pelo pipeline de treino (via
 `libras.utils.mediapipe_holistic.extract_keypoints`, que delega para cá).
 
-Formatos suportados (escolhidos pelo `keypoint_dim` do metadata do modelo):
+Formatos suportados (escolhidos pelo shape de entrada do modelo):
   438  — atual: pose + face reduzida (lábios/sobrancelhas) + mãos,
          com normalização espacial (`normalize_spatial`)
+  405  — o de 438 sem o z da pose (pose com x, y, visibility). O z da pose
+         é a feature que mais muda entre runtimes do MediaPipe — ver
+         docs/VALIDACAO_MEDIAPIPE_TASKS.md
   1662 — legado: pose + face completa (468) + mãos, sem normalização
          (formato dos modelos treinados antes de 31/08/2026)
 """
@@ -42,6 +45,11 @@ TOTAL_DIM = POSE_DIM + FACE_DIM + HAND_DIM + HAND_DIM
 
 LEGACY_FACE_DIM = FACE_MESH_POINTS * 3
 LEGACY_TOTAL_DIM = POSE_DIM + LEGACY_FACE_DIM + HAND_DIM + HAND_DIM
+
+# Formato sem o z da pose: 3 valores por ponto da pose (x, y, visibility).
+NO_POSE_Z_POSE_DIM = POSE_POINTS * 3
+NO_POSE_Z_TOTAL_DIM = NO_POSE_Z_POSE_DIM + FACE_DIM + HAND_DIM + HAND_DIM
+_POSE_Z_COLUMNS = np.arange(2, POSE_DIM, 4)
 
 # Índices das regiões no vetor de TOTAL_DIM dimensões
 REGION_SLICES = {
@@ -110,6 +118,21 @@ def keypoints_from_arrays_legacy(
     ])
 
 
+def drop_pose_z(vec: np.ndarray) -> np.ndarray:
+    """Remove a coluna z da pose de vetores de TOTAL_DIM (438 → 405); aceita (..., 438)."""
+    return np.delete(vec, _POSE_Z_COLUMNS, axis=-1)
+
+
+def keypoints_from_arrays_no_pose_z(
+    pose: np.ndarray | None,
+    face: np.ndarray | None,
+    left_hand: np.ndarray | None,
+    right_hand: np.ndarray | None,
+) -> np.ndarray:
+    """Vetor de NO_POSE_Z_TOTAL_DIM (405): o de `keypoints_from_arrays` sem o z da pose."""
+    return drop_pose_z(keypoints_from_arrays(pose, face, left_hand, right_hand))
+
+
 FeatureBuilder = Callable[
     [np.ndarray | None, np.ndarray | None, np.ndarray | None, np.ndarray | None],
     np.ndarray,
@@ -117,6 +140,7 @@ FeatureBuilder = Callable[
 
 FEATURE_BUILDERS: dict[int, FeatureBuilder] = {
     TOTAL_DIM: keypoints_from_arrays,
+    NO_POSE_Z_TOTAL_DIM: keypoints_from_arrays_no_pose_z,
     LEGACY_TOTAL_DIM: keypoints_from_arrays_legacy,
 }
 

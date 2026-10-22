@@ -22,7 +22,9 @@ data/interim/
 data/processed/
 data/raw_custom/
 data/processed_custom/
+data/processed_custom_tasks*/
 data/processed_10classes/
+data/landmarks/
 data/*.tar.gz
 
 # Artefatos de treino — regeneráveis via scripts/03_train.py e 04_evaluate.py

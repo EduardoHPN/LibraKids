@@ -34,29 +34,13 @@ import numpy as np
 
 from libras.config import PATHS
 from libras.features.keypoints import (
-    FACE_MESH_POINTS, FACE_SUBSET_INDICES, get_feature_builder,
-    keypoints_from_arrays, keypoints_from_arrays_legacy, normalize_sequence,
+    FACE_SUBSET_INDICES, get_feature_builder, keypoints_from_arrays, keypoints_from_arrays_legacy,
 )
+from libras.features.landmark_cache import PARTS, load_landmark_cache as _load
+from libras.features.landmark_cache import sequence_features as _features
 from libras.utils.io import load_json
 
-PARTS = ("pose", "face", "left_hand", "right_hand")
 _L_SHOULDER, _R_SHOULDER = 11, 12
-
-
-def _load(path: Path) -> dict[str, np.ndarray]:
-    d = dict(np.load(path))
-    d["face"] = d["face"][:, :FACE_MESH_POINTS]  # Tasks: 478 → 468 (igual à API)
-    return d
-
-
-def _frame_parts(d: dict, t: int) -> tuple:
-    """Partes do frame t no formato de keypoints_from_arrays (None se ausente)."""
-    return tuple(d[p][t] if d[f"{p}_present"][t] else None for p in PARTS)
-
-
-def _features(d: dict, builder, num_frames: int) -> np.ndarray:
-    frames = np.stack([builder(*_frame_parts(d, t)) for t in range(len(d["pose"]))])
-    return normalize_sequence(frames, num_frames)
 
 
 def _hybrid(leg: dict, tsk: dict, *, pose_z=False, hands=False, z_fit=None) -> dict:
