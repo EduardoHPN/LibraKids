@@ -15,6 +15,8 @@ dist/
 .DS_Store
 Thumbs.db
 *.h5
+# Exceção: modelo de letras usado pela API em produção (580 KB, entra na imagem Docker)
+!artifacts/models/letters/keras_landmarks_model.h5
 
 # Dados — nunca versionar binários de dataset (ver docs/ARCHITECTURE.md)
 data/raw/
