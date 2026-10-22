@@ -95,9 +95,9 @@ export class AlphabetPracticeComponent implements OnInit, OnDestroy {
     if (!video?.srcObject || video.readyState < 2 || this.isLoading) return;
 
     this.isLoading = true;
-    let hand;
+    let hand, handedness;
     try {
-      hand = await this.mediapipe.detectHand(video, performance.now());
+      ({ hand, handedness } = await this.mediapipe.detectHand(video, performance.now()));
     } catch (err) {
       console.error('Erro no MediaPipe:', err);
       this.isLoading = false;
@@ -112,7 +112,7 @@ export class AlphabetPracticeComponent implements OnInit, OnDestroy {
     }
 
     const letter = this.targetLetter;
-    this.librasService.predictLetterLandmarks(hand, letter).subscribe({
+    this.librasService.predictLetterLandmarks(hand, letter, handedness).subscribe({
       next: (response) => {
         this.isLoading = false;
         if (letter !== this.targetLetter) return;  // letra trocou no meio

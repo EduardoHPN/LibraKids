@@ -6,6 +6,9 @@ import { Observable } from 'rxjs';
 
 export type Point = number[];
 
+/** Mão do sinalizador. */
+export type Handedness = 'left' | 'right';
+
 /** Landmarks brutos de um frame (null = parte não detectada). */
 export interface SequenceFrame {
   pose: Point[] | null;        // 33 × [x, y, z, visibility]
@@ -34,6 +37,7 @@ export interface LetterPredictionResponse {
   predicted_letter: string;
   target_letter: string;
   box?: [number, number, number, number];  // normalizado (0–1)
+  handedness?: Handedness;
   confidence?: number;
   message: string;
 }
@@ -60,11 +64,13 @@ export class LibrasService {
     return this.http.get<ClassesResponse>(`${this.apiUrl}/classes`);
   }
 
-  /** Classifica a letra a partir dos 21 landmarks [x, y] da mão. */
-  predictLetterLandmarks(hand: Point[] | null, targetLetter: string): Observable<LetterPredictionResponse> {
+  /** Classifica a letra a partir dos 21 landmarks [x, y] da mão e de qual mão é. */
+  predictLetterLandmarks(
+    hand: Point[] | null, targetLetter: string, handedness: Handedness | null,
+  ): Observable<LetterPredictionResponse> {
     return this.http.post<LetterPredictionResponse>(
       `${this.apiUrl}/predict_letter_landmarks`,
-      { hand, target_letter: targetLetter }
+      { hand, target_letter: targetLetter, handedness }
     );
   }
 

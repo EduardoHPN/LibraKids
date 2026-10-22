@@ -5,7 +5,7 @@ import type {
   HolisticLandmarkerResult,
   NormalizedLandmark,
 } from '@mediapipe/tasks-vision';
-import { Point, SequenceFrame } from './libras.service';
+import { Handedness, Point, SequenceFrame } from './libras.service';
 
 // WASM servido pelo próprio app (copiado de node_modules em angular.json),
 // na mesma versão do pacote. Modelos com versão fixa (/1/, não /latest/)
@@ -77,12 +77,24 @@ export class MediapipeService {
     };
   }
 
-  /** Landmarks [x, y] da primeira mão detectada, ou null. */
-  async detectHand(video: HTMLVideoElement, timestampMs: number): Promise<Point[] | null> {
+  /**
+   * Landmarks [x, y] da primeira mão detectada (ou null) e qual mão é.
+   *
+   * Com frames não espelhados, o rótulo do HandLandmarker (tasks-vision
+   * 0.10.22) já é o lado real da mão — medido com vídeos do dataset (ver
+   * docs/API_CONTRACT.md). O servidor usa isso para o modelo de letras.
+   */
+  async detectHand(
+    video: HTMLVideoElement, timestampMs: number,
+  ): Promise<{ hand: Point[] | null; handedness: Handedness | null }> {
     const hands = await this.getHands();
     const result = hands.detectForVideo(video, timestampMs);
     const hand = result.landmarks[0];
-    return hand?.length ? hand.map(l => [round4(l.x), round4(l.y)]) : null;
+    const label = result.handedness[0]?.[0]?.categoryName;
+    return {
+      hand: hand?.length ? hand.map(l => [round4(l.x), round4(l.y)]) : null,
+      handedness: label === 'Left' ? 'left' : label === 'Right' ? 'right' : null,
+    };
   }
 
   /** Landmarks de um frame de vídeo para /predict_sequence. */
