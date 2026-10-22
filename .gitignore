@@ -2,6 +2,10 @@ __pycache__/
 *.pyc
 *.pyo
 .venv/
+.venv-*/
+
+# Modelos do MediaPipe Tasks — baixados de storage.googleapis.com (ver scripts/11)
+*.task
 *.egg-info/
 build/
 dist/

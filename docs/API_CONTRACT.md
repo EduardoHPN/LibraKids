@@ -163,9 +163,8 @@ Os SDKs atuais usam o MediaPipe **Tasks**:
   rótulo de lateralidade do `HandLandmarker` assume imagem espelhada, então
   **não confie nele**. Atribua cada mão ao punho mais próximo da pose (ponto
   15 = punho esquerdo, 16 = punho direito).
-- **`visibility` ausente** (algumas plataformas devolvem como opcional).
-  Isso precisa ser medido na validação numérica abaixo antes de definir um
-  valor padrão.
+- **`visibility`.** O `HolisticLandmarker` sempre devolve esse valor (0% de
+  ausência na validação), e ele fica próximo do legado. Envie como vem.
 
 ## Formato do vetor no servidor
 
@@ -180,10 +179,13 @@ shape de entrada de `best_model.keras` e exposto em `GET /health` como
 
 Para o cliente o contrato é o mesmo nos dois casos.
 
-## Pendências
+## Validação e pendências
 
-- [ ] **Validação numérica (passo 2.2.2).** Comparar os vetores e a acurácia
-      do LSTM entre o Holistic legado e o MediaPipe Tasks (mesmos `.task` do
-      app) em vídeos do dataset. Precisa ser feita antes de integrar o
-      MediaPipe no app.
-- [ ] Retreinar o LSTM no formato de 438 dimensões.
+- [x] **Validação numérica (passo 2.2.2)**, em
+      [`VALIDACAO_MEDIAPIPE_TASKS.md`](VALIDACAO_MEDIAPIPE_TASKS.md). O contrato
+      está correto: a lateralidade é consistente e face e mãos ficam
+      praticamente iguais ao legado. Mas o **modelo atual** perde acurácia com
+      landmarks do Tasks (top-1 cai de 93,8% para 85,2%), principalmente por
+      causa do z da pose.
+- [ ] Retreinar o LSTM com landmarks extraídos pelo MediaPipe Tasks, no
+      formato de 438 dimensões, avaliando uma versão sem o z da pose.
