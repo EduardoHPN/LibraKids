@@ -31,6 +31,17 @@ _MODEL_PATH = PATHS["models_letters"] / "keras_landmarks_model.h5"
 _ENCODER_PATH = PATHS["models_letters"] / "label_encoder.pkl"
 _CONFIDENCE_THRESHOLD = 0.8
 
+# O modelo de letras aprendeu o formato da mão ESQUERDA na imagem: no teste no
+# celular (22/10/2026), a mão esquerda acertava as letras assimétricas (C, L, P,
+# Q) sem inverter nada, e a direita só acertava com x invertido. Para servir as
+# duas mãos, a direita é espelhada (x → 1 − x) antes de classificar — o espelho
+# de uma mão direita tem o formato de uma esquerda. Os clientes seguem enviando
+# a imagem NÃO espelhada (contrato da API) e dizem qual mão é em `handedness`;
+# sem o campo, assume-se a direita (maioria destra). O modelo de palavras não
+# precisa disso: recebe cada mão na sua posição (left_hand / right_hand).
+_MODEL_TRAINED_HAND = "left"
+_DEFAULT_HANDEDNESS = "right"
+
 
 class _CompatInputLayer(_InputLayer):
     """Modelo foi salvo com `batch_shape` (formato antigo do Keras);
@@ -118,7 +129,7 @@ def predict_letter_landmarks():
         return jsonify({"success": False, "message": "Modelo de letras nao carregado."}), 503
 
     try:
-        hand, target_letter = parse_letter_payload(request.get_json(silent=True))
+        hand, target_letter, handedness = parse_letter_payload(request.get_json(silent=True))
     except PayloadError as e:
         return jsonify({"success": False, "message": str(e)}), 400
 
@@ -131,7 +142,11 @@ def predict_letter_landmarks():
             "message": "Nenhuma mao detectada.",
         })
 
-    x = hand.flatten().reshape(1, -1).astype(np.float32)
+    handedness = handedness or _DEFAULT_HANDEDNESS
+    model_hand = hand.copy()
+    if handedness != _MODEL_TRAINED_HAND:
+        model_hand[:, 0] = 1.0 - model_hand[:, 0]
+    x = model_hand.flatten().reshape(1, -1).astype(np.float32)
     probas = np.asarray(_letter_model(x, training=False))[0]
     idx = int(np.argmax(probas))
     confidence = float(probas[idx])
@@ -153,6 +168,7 @@ def predict_letter_landmarks():
         "predicted_letter": predicted_letter,
         "target_letter": target_letter,
         "box": _hand_box(hand),
+        "handedness": handedness,
         "confidence": confidence,
         "message": message,
     })

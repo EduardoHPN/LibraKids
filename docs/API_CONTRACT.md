@@ -22,7 +22,7 @@ Nenhum estado fica no servidor entre chamadas.
 | `face` | 468 **ou** 478 | `[x, y, z]` | malha completa; com 478 (Tasks, com íris) o servidor usa os 468 primeiros |
 | `left_hand` | 21 | `[x, y, z]` | mão **esquerda do sinalizador** |
 | `right_hand` | 21 | `[x, y, z]` | mão **direita do sinalizador** |
-| `hand` (letras) | 21 | `[x, y]` ou `[x, y, z]` | o modelo de letras usa só `x, y` |
+| `hand` (letras) | 21 | `[x, y]` ou `[x, y, z]` | o modelo de letras usa só `x, y`; envie `handedness` junto |
 
 - **Coordenadas normalizadas pela imagem.** `x` vai de 0 a 1 pela largura e
   `y` de 0 a 1 pela altura, com origem no canto superior esquerdo. `z` e
@@ -122,7 +122,7 @@ Erros (sempre `{"error": "<mensagem>"}`):
 Corpo, com um único frame da primeira mão detectada:
 
 ```json
-{ "hand": [[0.42, 0.61], "... 21 pontos"], "target_letter": "A" }
+{ "hand": [[0.42, 0.61], "... 21 pontos"], "target_letter": "A", "handedness": "right" }
 ```
 
 `hand: null` indica que nenhuma mão foi detectada. A resposta é `200` com
@@ -137,13 +137,27 @@ Resposta `200`:
   "predicted_letter": "A",
   "target_letter": "A",
   "box": [0.31, 0.42, 0.55, 0.80],
+  "handedness": "right",
   "confidence": 0.97,
   "message": "Gesto Correto!"
 }
 ```
 
 - `box` é `[x_min, y_min, x_max, y_max]` da mão em **coordenadas
-  normalizadas** (0–1). A antiga `/predict_letter` devolvia o box em pixels.
+  normalizadas** (0–1), nas mesmas coordenadas enviadas pelo cliente. A
+  antiga `/predict_letter` devolvia o box em pixels.
+- **`handedness` (opcional): `"left"` ou `"right"`, a mão do sinalizador.**
+  O modelo de letras atual aprendeu o formato da mão **esquerda** (confirmado
+  no celular em 22/10/2026). Por isso o servidor espelha a mão direita
+  (`x → 1 − x`) antes de classificar. Sem o campo, ele assume a direita.
+  - Os clientes continuam enviando a imagem **não** espelhada.
+  - No `HandLandmarker` do `@mediapipe/tasks-vision` 0.10.22, com frames não
+    espelhados, `handedness[0][0].categoryName` já é o lado real
+    (`"Right"` → `"right"`), medido com vídeos do dataset. A documentação do
+    MediaPipe diz que o rótulo assume imagem espelhada, então confira se
+    mudar de versão.
+  - O modelo de **palavras** não precisa disso, porque recebe cada mão na sua
+    posição (`left_hand` / `right_hand`).
 - Confiança abaixo de 0,8 → `predicted_letter: "Movimento Invalido"`.
 
 Erros (sempre `{"success": false, "message": "<mensagem>"}`): `400` para

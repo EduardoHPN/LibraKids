@@ -229,6 +229,41 @@ class TestPredictLetterLandmarks:
         assert resp.status_code == 400
         assert resp.get_json()["success"] is False
 
+    @pytest.mark.parametrize("handedness, mirrored", [
+        ("left", False),   # mão com que o modelo foi treinado: vai como está
+        ("right", True),   # espelhada para ficar com o formato de uma esquerda
+        (None, True),      # sem o campo: assume a direita (maioria destra)
+    ])
+    def test_right_hand_is_mirrored_for_model(self, client, fake_letter_model, monkeypatch, handedness, mirrored):
+        """O modelo de letras aprendeu a mão esquerda: só a direita tem o x invertido."""
+        seen = {}
+
+        def model(x, training=False):
+            seen["x"] = np.asarray(x)
+            return np.array([[0.9, 0.1]])
+
+        monkeypatch.setattr(letter_routes, "_letter_model", model)
+        hand = _hand()
+        payload = {"hand": hand, "target_letter": "A"}
+        if handedness is not None:
+            payload["handedness"] = handedness
+        body = client.post("/predict_letter_landmarks", json=payload).get_json()
+
+        sent = np.asarray(hand)
+        received = seen["x"].reshape(21, 2)
+        expected_x = 1 - sent[:, 0] if mirrored else sent[:, 0]
+        assert np.allclose(received[:, 0], expected_x)
+        assert np.allclose(received[:, 1], sent[:, 1])       # y nunca muda
+        assert body["handedness"] == (handedness or "right")
+        xs, ys = zip(*hand)
+        assert body["box"] == pytest.approx([min(xs), min(ys), max(xs), max(ys)])  # box nas coords do cliente
+
+    def test_invalid_handedness_is_400(self, client, fake_letter_model):
+        resp = client.post("/predict_letter_landmarks",
+                           json={"hand": _hand(), "target_letter": "A", "handedness": "Right"})
+        assert resp.status_code == 400
+        assert "handedness" in resp.get_json()["message"]
+
     def test_model_missing_is_503(self, client, monkeypatch):
         monkeypatch.setattr(letter_routes, "_letter_model", None)
         resp = client.post("/predict_letter_landmarks", json={"hand": _hand(), "target_letter": "A"})

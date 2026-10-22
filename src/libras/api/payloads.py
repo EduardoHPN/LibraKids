@@ -25,6 +25,9 @@ _FACE_POINTS_ACCEPTED = (FACE_MESH_POINTS, FACE_MESH_POINTS + 10)
 
 _TARGET_LETTER_MAX_LEN = 10
 
+# Mão do sinalizador em /predict_letter_landmarks (campo opcional).
+HANDEDNESS_VALUES = ("left", "right")
+
 # Landmarks de um frame: (pose, face, left_hand, right_hand), cada um ou None.
 FrameLandmarks = tuple[np.ndarray | None, np.ndarray | None, np.ndarray | None, np.ndarray | None]
 
@@ -103,13 +106,14 @@ def parse_sequence_payload(data: Any) -> list[FrameLandmarks]:
     return parsed
 
 
-def parse_letter_payload(data: Any) -> tuple[np.ndarray | None, str]:
+def parse_letter_payload(data: Any) -> tuple[np.ndarray | None, str, str | None]:
     """
     Valida o corpo de POST /predict_letter_landmarks.
 
-    Retorna (hand, target_letter): hand é (21, 2) com x, y — o modelo de
-    letras usa só x/y; um z enviado a mais é descartado — ou None se nenhuma
-    mão foi detectada.
+    Retorna (hand, target_letter, handedness): hand é (21, 2) com x, y — o
+    modelo de letras usa só x/y; um z enviado a mais é descartado — ou None se
+    nenhuma mão foi detectada. handedness é "left"/"right" (a mão do
+    sinalizador) ou None se o cliente não informou.
     """
     if not isinstance(data, dict):
         raise PayloadError("Corpo deve ser um objeto JSON.")
@@ -122,7 +126,11 @@ def parse_letter_payload(data: Any) -> tuple[np.ndarray | None, str]:
             f"'target_letter' deve ser um texto de 1 a {_TARGET_LETTER_MAX_LEN} caracteres."
         )
 
+    handedness = data.get("handedness")
+    if handedness is not None and handedness not in HANDEDNESS_VALUES:
+        raise PayloadError("'handedness' deve ser \"left\", \"right\" ou null.")
+
     hand = _points(data["hand"], "hand", (HAND_POINTS,), (2, 3))
     if hand is not None:
         hand = hand[:, :2]
-    return hand, target_letter.strip()
+    return hand, target_letter.strip(), handedness
