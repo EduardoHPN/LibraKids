@@ -111,12 +111,11 @@ Como construir e rodar a imagem está no [README](../README.md#imagem-docker-da-
 | Sem `DATABASE_URL` | Não sobe (`PermissionError` em `/app/instance`), como esperado |
 | `LIBRAS_ENABLE_RECORD_DATA=1` | Não sobe (`No module named 'cv2'`), como esperado |
 | `flask db upgrade` na imagem | Passou com SQLite temporário |
-| Conexão da imagem com o Supabase | **Não validada:** o pooler respondeu `tenant/user not found`, com o mesmo erro fora do Docker |
+| `flask db current` no Supabase, pela imagem | Conectou, na revisão `4dc8d8585ded (head)`. Antes de restaurar o projeto pausado, o pooler respondia `tenant/user not found` |
 
-**Tamanho da imagem:** o `docker images` mostra 2,57 GB, mas esse número soma as camadas compactadas e descompactadas. São **562 MB compactados** (o que vai para o registry) e cerca de **2,0 GB descompactados**, acima da meta do roteiro ("bem abaixo de 2 GB"). Os maiores pacotes são `tensorflow` (885 MB), `jaxlib` (287 MB) e `scipy` (119 MB). O TensorFlow puxa `jax`/`jaxlib`, e a API subiu num teste com o `import jax` bloqueado, mas eles continuam na imagem: removê-los é uma decisão pendente.
+**Tamanho da imagem:** o `docker images` mostra 2,57 GB, mas esse número soma as camadas compactadas e descompactadas. São **562 MB compactados** (o que vai para o registry) e cerca de **2,0 GB descompactados**, acima da meta do roteiro ("bem abaixo de 2 GB"). Os maiores pacotes são `tensorflow` (885 MB), `jaxlib` (287 MB) e `scipy` (119 MB). O TensorFlow puxa `jax`/`jaxlib` (306 MB), e o import vem de `tensorflow/lite/python/util.py`. Eles continuam na imagem: removê-los é uma decisão pendente. Num container descartável sem os dois, a API subiu, o `/predict_sequence` deu o mesmo resultado e a suíte terminou com 84 testes aprovados e 9 pulados, mas o `pip check` passou a acusar a dependência ausente. O teste não usou o gunicorn.
 
 **Pendências**
-- Restaurar o projeto no painel do Supabase e repetir a conexão: `docker run --rm --env-file .env librakids-api flask --app run_backend db current`.
 - O `create_app` imprime usuário e host do banco (sem a senha) no log, que na nuvem fica guardado. Vale rever na Fase 5.
 - O `/health` responde 200 mesmo se um modelo falhar ao carregar, e o `HEALTHCHECK` só confere essa resposta. Para saber se os modelos carregaram, leia o JSON.
 
