@@ -150,7 +150,7 @@ O comportamento das rotas está em [`API_CONTRACT.md`](API_CONTRACT.md#autentica
 | `ng test` (spec do interceptor) | 16 aprovados |
 | App: `tsc --noEmit` | Sem erros nos arquivos alterados. Há 4 erros de `ColorValue` em `src/app/(tabs)/_layout.tsx`, arquivo que esta fase não alterou |
 | Imagem contra o Supabase: `/register`, `/login`, as duas predições, `/logout` e 401 depois | Todas as chamadas como esperado; palavras com "Sim", confiança 0,83. Usuário de teste removido |
-| Memória com 1 worker | 355 MiB depois de 40 predições de letras e 11 de palavras |
+| Memória com 1 worker | 355 MiB depois de 32 predições de letras e 11 de palavras |
 
 **Latência: as predições agora consultam o banco.** Medianas com o container nesta máquina:
 
