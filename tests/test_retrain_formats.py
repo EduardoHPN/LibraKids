@@ -100,6 +100,7 @@ class TestLandmarkCache:
 
 @pytest.mark.parametrize("extra, dim", [([], TOTAL_DIM), (["--no-pose-z"], NO_POSE_Z_TOTAL_DIM)])
 def test_build_training_set_script(tmp_path, extra, dim):
+    pytest.importorskip("tqdm")  # dependência de treino, usada pelo script
     cache = _write_cache(tmp_path / "cache")
     out = tmp_path / "out"
     result = subprocess.run(

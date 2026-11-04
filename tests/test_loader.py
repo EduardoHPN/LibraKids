@@ -4,6 +4,7 @@ import numpy as np
 import pytest
 
 pytest.importorskip("tensorflow")
+pytest.importorskip("tqdm")
 
 from libras.data.loader import list_classes, load_arrays, split_data  # noqa: E402
 
