@@ -103,9 +103,10 @@ Como construir e rodar a imagem está no [README](../README.md#imagem-docker-da-
 | Verificação | Resultado |
 |---|---|
 | `docker build` sem cache | Passou, em cerca de 9 min |
-| `GET /health` | 200, `lstm_loaded` e `letter_loaded` verdadeiros, `lstm_keypoint_dim` 405, 24 s depois do `docker run` |
-| `POST /predict_sequence` com `tests/fixtures/predict_sequence.json` | 200, "Sim" com confiança 0,83; 0,6 s na segunda chamada |
-| Memória com 1 worker | 468 MiB em repouso |
+| `GET /health` | 200, `lstm_loaded` e `letter_loaded` verdadeiros, `lstm_keypoint_dim` 405; responde de 8 a 14 s depois do `docker run` |
+| `POST /predict_sequence` com `tests/fixtures/predict_sequence.json` | 200, "Sim" com confiança 0,83, entre 0,33 e 0,76 s por chamada |
+| `POST /predict_letter_landmarks` com uma mão sintética | 200, com a resposta completa. Como a mão não é real, o resultado foi "Movimento Invalido" (confiança 0,75, abaixo do limiar de 0,8) |
+| Memória com 1 worker | Cerca de 320 MiB depois de 3 predições |
 | `HEALTHCHECK`, com a porta padrão e com `PORT=9000` | `healthy` nos dois casos |
 | Conteúdo da imagem | Usuário não-root, `/app` só leitura; sem `.env`, `configs/`, `test_data.npz`, `weights_raw.npz`, `mediapipe`, `opencv` e pacote `tensorflow` |
 | Sem `DATABASE_URL` | Não sobe (`PermissionError` em `/app/instance`), como esperado |
@@ -113,7 +114,11 @@ Como construir e rodar a imagem está no [README](../README.md#imagem-docker-da-
 | `flask db upgrade` na imagem | Passou com SQLite temporário |
 | `flask db current` no Supabase, pela imagem | Conectou, na revisão `4dc8d8585ded (head)`. Antes de restaurar o projeto pausado, o pooler respondia `tenant/user not found` |
 
-**Tamanho da imagem:** o `docker images` mostra 2,57 GB, mas esse número soma as camadas compactadas e descompactadas. São **562 MB compactados** (o que vai para o registry) e cerca de **2,0 GB descompactados**, acima da meta do roteiro ("bem abaixo de 2 GB"). Os maiores pacotes são `tensorflow` (885 MB), `jaxlib` (287 MB) e `scipy` (119 MB). O TensorFlow puxa `jax`/`jaxlib` (306 MB), e o import vem de `tensorflow/lite/python/util.py`. Eles continuam na imagem: removê-los é uma decisão pendente. Num container descartável sem os dois, a API subiu, o `/predict_sequence` deu o mesmo resultado e a suíte terminou com 84 testes aprovados e 9 pulados, mas o `pip check` passou a acusar a dependência ausente. O teste não usou o gunicorn.
+**Tamanho da imagem:** o `docker images` mostra 2,16 GB, mas esse número soma as camadas compactadas e descompactadas. São **474 MB compactados** (o que vai para o registry) e cerca de **1,7 GB descompactados**. A meta do roteiro ("bem abaixo de 2 GB") foi cumprida só em parte: fica abaixo de 2 GB, mas não "bem abaixo". Os maiores pacotes são `tensorflow` (885 MB) e `scipy` (119 MB).
+
+**`jax` e `jaxlib` foram removidos da imagem** no estágio de build, o que economiza 306 MB. O TensorFlow os declara como dependência, mas a API não precisa deles: o import vem de `tensorflow/lite/python/util.py` e é opcional. Com a remoção, a predição dá o mesmo resultado e a suíte, rodada num container sem os dois, termina com 84 testes aprovados e 9 pulados. Efeitos colaterais:
+- O `pip check` na imagem acusa `tensorflow-cpu 2.12.0 requires jax`. É esperado.
+- Se um dia a imagem precisar converter modelos para TFLite ou mudar a versão do TensorFlow, reveja esse corte.
 
 **Pendências**
 - O `create_app` imprime usuário e host do banco (sem a senha) no log, que na nuvem fica guardado. Vale rever na Fase 5.

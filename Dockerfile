@@ -8,6 +8,11 @@ COPY requirements.txt /tmp/requirements.txt
 RUN python -m venv /opt/venv \
     && /opt/venv/bin/pip install --no-cache-dir --disable-pip-version-check -r /tmp/requirements.txt
 
+# O TensorFlow declara jax como dependência, mas a API não precisa dele (só o
+# TF Lite o importa, de forma opcional). Economiza 306 MB. Por causa disso, o
+# `pip check` acusa o jax ausente na imagem, e isso é esperado.
+RUN /opt/venv/bin/pip uninstall -y --disable-pip-version-check jax jaxlib
+
 # ── Final: venv, código e modelos, rodando com usuário não-root ──
 FROM python:3.11-slim
 

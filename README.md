@@ -112,7 +112,9 @@ servidor, só é registrada com `LIBRAS_ENABLE_RECORD_DATA=1`.
 
 A imagem usa `python:3.11-slim`, roda com usuário não-root e contém só o runtime:
 `src/`, `migrations/`, `run_backend.py` e os modelos usados na inferência. O
-`.dockerignore` é uma lista de liberação, então o `.env` não entra na imagem.
+`.dockerignore` é uma lista de liberação, então o `.env` não entra na imagem. O build
+remove `jax` e `jaxlib`, que a API não usa, então o `pip check` na imagem acusa o
+`jax` ausente, e isso é esperado.
 
 ```bash
 docker build -t librakids-api .
