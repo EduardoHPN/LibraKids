@@ -2,7 +2,7 @@
 
 Estado da execução do roteiro [`PROMPT_DEPLOY_NUVEM.md`](PROMPT_DEPLOY_NUVEM.md), com as decisões já tomadas e o motivo de cada uma. Atualize este arquivo ao concluir cada fase. Ele é a fonte de verdade para retomar o trabalho em qualquer computador ou sessão do Claude Code.
 
-**Última atualização:** 2026-10-22, com as Fases 1 e 2 concluídas. A próxima é a Fase 3 (imagem Docker).
+**Última atualização:** 2026-11-04, com as Fases 1 a 3 concluídas. A próxima é a Fase 4 (token nas rotas de predição).
 
 ## Repositórios
 
@@ -20,13 +20,15 @@ Os dois ficam em pastas irmãs, por exemplo `C:\Users\<voce>\LibraKids` e `C:\Us
    git clone -b lucas <url-github-librakids> LibraKids
    git clone -b lucas/mediapipe-on-device <url-bitbucket-mobile-libras> mobile-libras
    ```
-2. **Backend (LibraKids).** Use Python 3.10 ou 3.11; o 3.11 foi testado e instala os pins do TensorFlow 2.12 e do MediaPipe 0.10.9.
+2. **Backend (LibraKids).** Use Python 3.11: o SQLAlchemy 2.1.5 exige 3.11 ou mais novo.
    ```bash
    python -m venv .venv
    .venv\Scripts\activate
-   pip install -r requirements.txt
-   pip install -e .[api,dev]
+   pip install -e .[api,dev]     # só a API e os testes
+   pip install -e .[train,dev]   # também treino, notebooks e dataset (MediaPipe, OpenCV etc.)
    ```
+   Use um venv novo: um `.venv` anterior à Fase 3 tem o pacote `tensorflow`, e instalar estas dependências nele colocaria o `tensorflow-cpu` junto, sendo que os dois instalam o mesmo módulo.
+
    Crie o `.env` a partir do `.env.example`, com a `DATABASE_URL` do **Session pooler** do Supabase. A senha não está em lugar nenhum do repositório: pegue-a no painel do Supabase. O banco já tem as migrações aplicadas, então rodar `flask --app run_backend db upgrade` de novo não altera nada.
 
    Para conferir, suba a API com `python run_backend.py` e abra `GET http://localhost:5001/health`. Ele deve mostrar `lstm_loaded: true`, `lstm_keypoint_dim: 405` e `letter_loaded: true`.
@@ -83,21 +85,50 @@ Dados que **não** estão no git e só fazem falta para retreinar: os vídeos do
 - MediaPipe no aparelho via **WebView com `@mediapipe/tasks-vision` 0.10.22-rc**, o mesmo runtime do Angular. Não exige código nativo e roda no Expo Go. Commits: `59c29db` (alfabeto), `3711c06` (palavras, captura de 4 s a 7,5 amostras/s, o mesmo ritmo do treino) e `0548ae0` (`handedness` nas letras).
 - **Testado no celular (Android, Expo Go) em 2026-10-22:** login, alfabeto e palavras funcionaram.
 
-### Fases 3 a 6. Não iniciadas
+### Fase 3: imagem Docker. Concluída
 
-Observações já levantadas para a Fase 3:
-- O servidor não precisa de `mediapipe` nem de `opencv` (opção (a)). Use `tensorflow-cpu==2.12.0`.
-- O `label_encoder.pkl` das letras foi salvo com scikit-learn 1.7.1, mas o projeto usa 1.3.2. Isso gera um `InconsistentVersionWarning` ao carregar. Avalie regravá-lo ou alinhar a versão.
-- No Windows 11 Home, o Docker Desktop precisa do WSL 2.
+Como construir e rodar a imagem está no [README](../README.md#imagem-docker-da-api).
+
+**Decisões que substituem o roteiro**
+- **`python:3.11-slim`, não 3.10.** O SQLAlchemy 2.1.5 exige 3.11 ou mais novo, e o `.venv` testado já usa 3.11.
+- **Sem `LIBRAS_ROOT`.** A imagem usa `PYTHONPATH=/app/src`, sem instalar o pacote: o `PROJECT_ROOT` (`parents[2]`) já resolve para `/app`.
+- **`configs/` fica fora da imagem.** A API não usa `load_config`.
+- **`.dockerignore` por lista de liberação,** em vez de lista de exclusão: um arquivo novo na raiz, como o `.env`, fica fora por padrão.
+- **CMD em formato shell com `exec`,** sem script de entrypoint. Por isso não há `.gitattributes`.
+
+**Dependências:** `requirements.txt` (runtime, UTF-8 sem BOM, com `tensorflow-cpu` e sem `mediapipe`/`opencv`), `requirements-train.txt` e `requirements-dev.txt`, espelhados nos extras `api`, `train` e `dev` do `pyproject.toml`. O `label_encoder.pkl` foi regravado com scikit-learn 1.3.2, mantendo as 21 classes na mesma ordem.
+
+**Validação em 2026-11-04** (Docker 29.9.2, com 3,9 GB de RAM no WSL 2):
+
+| Verificação | Resultado |
+|---|---|
+| `docker build` sem cache | Passou, em cerca de 9 min |
+| `GET /health` | 200, `lstm_loaded` e `letter_loaded` verdadeiros, `lstm_keypoint_dim` 405, 24 s depois do `docker run` |
+| `POST /predict_sequence` com `tests/fixtures/predict_sequence.json` | 200, "Sim" com confiança 0,83; 0,6 s na segunda chamada |
+| Memória com 1 worker | 468 MiB em repouso |
+| `HEALTHCHECK`, com a porta padrão e com `PORT=9000` | `healthy` nos dois casos |
+| Conteúdo da imagem | Usuário não-root, `/app` só leitura; sem `.env`, `configs/`, `test_data.npz`, `weights_raw.npz`, `mediapipe`, `opencv` e pacote `tensorflow` |
+| Sem `DATABASE_URL` | Não sobe (`PermissionError` em `/app/instance`), como esperado |
+| `LIBRAS_ENABLE_RECORD_DATA=1` | Não sobe (`No module named 'cv2'`), como esperado |
+| `flask db upgrade` na imagem | Passou com SQLite temporário |
+| Conexão da imagem com o Supabase | **Não validada:** o pooler respondeu `tenant/user not found`, com o mesmo erro fora do Docker |
+
+**Tamanho da imagem:** o `docker images` mostra 2,57 GB, mas esse número soma as camadas compactadas e descompactadas. São **562 MB compactados** (o que vai para o registry) e cerca de **2,0 GB descompactados**, acima da meta do roteiro ("bem abaixo de 2 GB"). Os maiores pacotes são `tensorflow` (885 MB), `jaxlib` (287 MB) e `scipy` (119 MB). O TensorFlow puxa `jax`/`jaxlib`, e a API subiu num teste com o `import jax` bloqueado, mas eles continuam na imagem: removê-los é uma decisão pendente.
+
+**Pendências**
+- Restaurar o projeto no painel do Supabase e repetir a conexão: `docker run --rm --env-file .env librakids-api flask --app run_backend db current`.
+- O `create_app` imprime usuário e host do banco (sem a senha) no log, que na nuvem fica guardado. Vale rever na Fase 5.
+- O `/health` responde 200 mesmo se um modelo falhar ao carregar, e o `HEALTHCHECK` só confere essa resposta. Para saber se os modelos carregaram, leia o JSON.
+
+### Fases 4 a 6. Não iniciadas
 
 ## Próximos passos
 
-1. **Fase 3:** imagem Docker enxuta (veja o roteiro).
-2. **Fases 4 a 6:** token nas rotas de predição, variáveis de ambiente e URLs configuráveis com HTTPS. O app já lê a URL de `EXPO_PUBLIC_API_URL` (`.env.development` e `.env.production`).
-3. **Telas restantes do app** (Início, Histórico, Perfil etc.). As que guardam dados, como histórico e progresso, precisam de endpoints e tabelas novas no Supabase. Trate-as como uma fase própria.
-4. **Deploy** na nuvem, fora do roteiro atual: Cloud Run ou Azure Container Apps, com `min-instances=1`.
-5. Quando a parte do app estiver pronta, abra um **pull request no Bitbucket** da `lucas/mediapipe-on-device` para a `master`, para revisão da dona do repositório.
-6. Melhoria de modelo: gravar **outros sinalizadores**. É o maior ganho de acurácia esperado.
+1. **Fases 4 a 6:** token nas rotas de predição, variáveis de ambiente e URLs configuráveis com HTTPS. O app já lê a URL de `EXPO_PUBLIC_API_URL` (`.env.development` e `.env.production`).
+2. **Telas restantes do app** (Início, Histórico, Perfil etc.). As que guardam dados, como histórico e progresso, precisam de endpoints e tabelas novas no Supabase. Trate-as como uma fase própria.
+3. **Deploy** na nuvem, fora do roteiro atual: Cloud Run ou Azure Container Apps, com `min-instances=1`.
+4. Quando a parte do app estiver pronta, abra um **pull request no Bitbucket** da `lucas/mediapipe-on-device` para a `master`, para revisão da dona do repositório.
+5. Melhoria de modelo: gravar **outros sinalizadores**. É o maior ganho de acurácia esperado.
 
 ## Testar o app no celular
 

@@ -1,0 +1,17 @@
+# Lista de liberação: tudo fica fora da imagem, inclusive o .env,
+# exceto o que a API usa em runtime. A última regra que casa com o arquivo vale.
+*
+
+!src/
+!migrations/
+!run_backend.py
+!requirements.txt
+
+# Modelos: só o necessário para a inferência (sem test_data.npz e weights_raw.npz).
+!artifacts/models/best_model.keras
+!artifacts/models/metadata.json
+!artifacts/models/letters/keras_landmarks_model.h5
+!artifacts/models/letters/label_encoder.pkl
+
+**/__pycache__
+**/*.egg-info
