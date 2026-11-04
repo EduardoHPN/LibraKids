@@ -2,6 +2,8 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 
+import { API_URL } from './api.config';
+
 // Formato dos payloads: docs/API_CONTRACT.md (na raiz do repositório).
 
 export type Point = number[];
@@ -51,7 +53,7 @@ export interface ClassesResponse {
   providedIn: 'root'
 })
 export class LibrasService {
-  private apiUrl = 'http://localhost:5001';
+  private apiUrl = API_URL;
 
   constructor(private http: HttpClient) { }
 

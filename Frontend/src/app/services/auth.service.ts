@@ -3,11 +3,13 @@ import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { Observable, tap } from 'rxjs';
 
+import { API_URL } from './api.config';
+
 @Injectable({
   providedIn: 'root'
 })
 export class AuthService {
-  private baseUrl = 'http://localhost:5001/';
+  private baseUrl = API_URL;
 
   constructor(
     private http: HttpClient,
@@ -32,18 +34,29 @@ export class AuthService {
 // --- Rotas de IA ---
   // (predição de letras/palavras fica no LibrasService, com landmarks)
   recordData(data: any): Observable<any> {
-    return this.http.post(`${this.baseUrl}/record_data`, data, { withCredentials: true });
+    return this.http.post(`${this.baseUrl}/record_data`, data);
   }
 
   // --- Rotas Protegidas de Conteúdo ---
   getProtectedPage(route: string): Observable<any> {
-    return this.http.get(`${this.baseUrl}${route}`, { withCredentials: true });
+    return this.http.get(`${this.baseUrl}/${route}`);
   }
 
+  /**
+   * Invalida o token no servidor e encerra a sessão local na hora, sem esperar
+   * a resposta. O `subscribe` vem antes porque o interceptor lê o token ao
+   * enviar. Se a chamada falhar, o token vale até expirar.
+   */
   logout(): void {
+    this.http.post(`${this.baseUrl}/logout`, {}).subscribe({ error: () => undefined });
+    this.clearSession();
+    console.log('Utilizador deslogado.');
+  }
+
+  /** Esquece o token e volta ao login. */
+  clearSession(): void {
     localStorage.removeItem('session_token');
     this.router.navigate(['/login']);
-    console.log('Utilizador deslogado.');
   }
 
   getToken(): string | null {
