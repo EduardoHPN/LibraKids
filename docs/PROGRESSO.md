@@ -2,7 +2,7 @@
 
 Estado da execução do roteiro [`PROMPT_DEPLOY_NUVEM.md`](PROMPT_DEPLOY_NUVEM.md), com as decisões já tomadas e o motivo de cada uma. Atualize este arquivo ao concluir cada fase. Ele é a fonte de verdade para retomar o trabalho em qualquer computador ou sessão do Claude Code.
 
-**Última atualização:** 2026-11-04, com as Fases 1 a 4 concluídas, faltando o teste da Fase 4 no celular. A próxima é a Fase 5 (variáveis de ambiente e CORS).
+**Última atualização:** 2026-11-04, com as Fases 1 a 4 concluídas. A próxima é a Fase 5 (variáveis de ambiente e CORS).
 
 ## Repositórios
 
@@ -124,7 +124,7 @@ Como construir e rodar a imagem está no [README](../README.md#imagem-docker-da-
 - O `create_app` imprime usuário e host do banco (sem a senha) no log, que na nuvem fica guardado. Vale rever na Fase 5.
 - O `/health` responde 200 mesmo se um modelo falhar ao carregar, e o `HEALTHCHECK` só confere essa resposta. Para saber se os modelos carregaram, leia o JSON.
 
-### Fase 4: token nas rotas de predição. Concluída, falta o teste no celular
+### Fase 4: token nas rotas de predição. Concluída
 
 O comportamento das rotas está em [`API_CONTRACT.md`](API_CONTRACT.md#autenticação).
 
@@ -151,6 +151,7 @@ O comportamento das rotas está em [`API_CONTRACT.md`](API_CONTRACT.md#autentica
 | App: `tsc --noEmit` | Sem erros nos arquivos alterados. Há 4 erros de `ColorValue` em `src/app/(tabs)/_layout.tsx`, arquivo que esta fase não alterou |
 | Imagem contra o Supabase: `/register`, `/login`, as duas predições, `/logout` e 401 depois | Todas as chamadas como esperado; palavras com "Sim", confiança 0,83. Usuário de teste removido |
 | Memória com 1 worker | 355 MiB depois de 32 predições de letras e 11 de palavras |
+| Celular (Expo Go) com o container na porta 8080 e o Supabase, testado pelo usuário | Passou: login, senha errada, letras com as duas mãos, palavras, logout, nova entrada e volta ao login com as sessões apagadas |
 
 **Latência: as predições agora consultam o banco.** Medianas com o container nesta máquina:
 
@@ -162,7 +163,6 @@ O comportamento das rotas está em [`API_CONTRACT.md`](API_CONTRACT.md#autentica
 Validar o token custa cerca de 4 idas e voltas ao banco (565 ms aqui), então o custo acompanha a distância: **no deploy, coloque a API na mesma região do Supabase**. Enquanto a API roda longe do banco, as letras saem a cada 600 ms ou mais, em vez de 500 ms.
 
 **Pendências**
-- **Testar no celular** com o container na porta 8080, incluindo letras com as duas mãos ([roteiro](#testar-o-app-no-celular)). A volta ao login no app só foi testada no cliente HTTP, com `fetch` simulado.
 - Com o banco fora do ar ou pausado, as predições respondem 500. A sessão continua, mas o reconhecimento para.
 - O `mobile-libras` não tem ESLint, e o `npm run lint` (`expo lint`) tenta instalá-lo e altera `package.json` e `package-lock.json`. Desfaça essa alteração se ela não for intencional.
 
@@ -170,12 +170,11 @@ Validar o token custa cerca de 4 idas e voltas ao banco (565 ms aqui), então o 
 
 ## Próximos passos
 
-1. **Testar a Fase 4 no celular.**
-2. **Fases 5 e 6:** variáveis de ambiente, CORS e URLs configuráveis com HTTPS. O app já lê a URL de `EXPO_PUBLIC_API_URL` (`.env.development` e `.env.production`).
-3. **Telas restantes do app** (Início, Histórico, Perfil etc.). As que guardam dados, como histórico e progresso, precisam de endpoints e tabelas novas no Supabase. Trate-as como uma fase própria.
-4. **Deploy** na nuvem, fora do roteiro atual: Cloud Run ou Azure Container Apps, com `min-instances=1`, na mesma região do Supabase.
-5. Quando a parte do app estiver pronta, abra um **pull request no Bitbucket** da `lucas/mediapipe-on-device` para a `master`, para revisão da dona do repositório.
-6. Melhoria de modelo: gravar **outros sinalizadores**. É o maior ganho de acurácia esperado.
+1. **Fases 5 e 6:** variáveis de ambiente, CORS e URLs configuráveis com HTTPS. O app já lê a URL de `EXPO_PUBLIC_API_URL` (`.env.development` e `.env.production`).
+2. **Telas restantes do app** (Início, Histórico, Perfil etc.). As que guardam dados, como histórico e progresso, precisam de endpoints e tabelas novas no Supabase. Trate-as como uma fase própria.
+3. **Deploy** na nuvem, fora do roteiro atual: Cloud Run ou Azure Container Apps, com `min-instances=1`, na mesma região do Supabase.
+4. Quando a parte do app estiver pronta, abra um **pull request no Bitbucket** da `lucas/mediapipe-on-device` para a `master`, para revisão da dona do repositório.
+5. Melhoria de modelo: gravar **outros sinalizadores**. É o maior ganho de acurácia esperado.
 
 ## Testar o app no celular
 
@@ -185,4 +184,4 @@ Validar o token custa cerca de 4 idas e voltas ao banco (565 ms aqui), então o 
 - O IP do PC muda conforme a rede. Antes do `npx expo start`, atualize o `.env.development.local` do app e defina `REACT_NATIVE_PACKAGER_HOSTNAME=<IP>`.
 - Se aparecer "Failed to download remote update" no primeiro carregamento, é timeout enquanto o Metro monta o bundle. Um Reload resolve.
 - **Com o container:** rode `docker run --rm -p 8080:8080 --env-file .env librakids-api`, use a porta **8080** na `EXPO_PUBLIC_API_URL` e libere essa porta no firewall, só no perfil Privado.
-- **Para testar o 401:** com o app aberto, apague as sessões da conta no SQL Editor do Supabase (`DELETE FROM user_session WHERE user_id = (SELECT id FROM "user" WHERE username = '<usuario>');`) e faça uma letra. O app deve voltar ao login.
+- **Para testar o 401:** com o app aberto, apague as sessões da conta (a conta em si continua existindo) no SQL Editor do Supabase (`DELETE FROM user_session WHERE user_id = (SELECT id FROM "user" WHERE username = '<usuario>');`) e faça uma letra. O app deve voltar ao login.
