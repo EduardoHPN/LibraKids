@@ -16,6 +16,7 @@ import mediapipe as mp
 import numpy as np
 from flask import Blueprint, jsonify, request
 
+from libras.api.auth import login_required
 from libras.config import PATHS
 
 record_bp = Blueprint("record", __name__)
@@ -48,6 +49,7 @@ def _hand_bounding_box(landmarks, w: int, h: int, margin: int = 20) -> tuple[int
 
 
 @record_bp.route("/record_data", methods=["POST"])
+@login_required
 def record_data():
     data = request.get_json()
     if not data or "image" not in data or "label" not in data:

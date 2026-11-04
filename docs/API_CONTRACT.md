@@ -6,11 +6,28 @@ pré-processamento: seleção do subconjunto da face, `normalize_spatial` e
 `normalize_sequence`. Assim existe uma única fonte de verdade
 (`src/libras/features/keypoints.py`), a mesma usada no treino.
 
-As rotas são **stateless**: cada requisição traz tudo o que é preciso.
-Nenhum estado fica no servidor entre chamadas.
+As rotas são **stateless**: cada requisição traz tudo o que é preciso. Nenhum
+landmark nem buffer fica no servidor entre chamadas. O banco só guarda as
+sessões de login.
 
-> Autenticação: hoje as rotas de predição são públicas. A partir da Fase 4
-> elas vão exigir `Authorization: Bearer <token>` (obtido em `/login`).
+## Autenticação
+
+`POST /predict_sequence`, `POST /predict_letter_landmarks`, `POST /record_data`,
+`GET /me` e `POST /logout` exigem o header `Authorization: Bearer <token>`, com o
+`access_token` devolvido por `POST /login`. As rotas `/health`, `/classes`,
+`/register` e `/login` são públicas.
+
+Sem um token válido, a resposta é sempre `401 {"message": "Nao autenticado."}`,
+esteja ele ausente, malformado, inexistente, vencido ou encerrado. O cliente deve
+esquecer o token e voltar ao login. O 401 de `/login` é outro caso: significa
+senha errada e traz sua própria mensagem.
+
+- **Sessões:** cada login cria uma sessão própria, então a mesma conta pode ficar
+  ativa no app e no site ao mesmo tempo. `/logout` encerra só a sessão do token enviado.
+- **Validade:** `LIBRAS_TOKEN_TTL_HOURS` horas contadas do login (padrão: 168 h),
+  sem renovação por uso.
+- **Banco fora do ar:** as rotas protegidas respondem 500, não 401. Nesse caso, o
+  cliente deve manter o token.
 
 ---
 

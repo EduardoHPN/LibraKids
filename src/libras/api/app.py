@@ -16,6 +16,7 @@ from libras.api.extensions import bcrypt, db, migrate
 from libras.config import PATHS, PROJECT_ROOT
 
 _ENV_FILE = PROJECT_ROOT / ".env"
+_DEFAULT_TOKEN_TTL_HOURS = 168  # 7 dias
 
 
 def normalize_database_url(url: str) -> str:
@@ -49,6 +50,20 @@ def _default_database_uri(app: Flask) -> str:
     return f"sqlite:///{db_path}"
 
 
+def _token_ttl_hours() -> int:
+    """Validade do token em horas (`LIBRAS_TOKEN_TTL_HOURS`). Valor inválido impede a API de subir."""
+    raw = os.environ.get("LIBRAS_TOKEN_TTL_HOURS", "").strip()
+    if not raw:
+        return _DEFAULT_TOKEN_TTL_HOURS
+    try:
+        hours = int(raw)
+    except ValueError:
+        hours = 0
+    if hours <= 0:
+        raise ValueError(f"LIBRAS_TOKEN_TTL_HOURS deve ser um inteiro positivo, recebido: {raw!r}")
+    return hours
+
+
 def create_app(test_config: dict[str, Any] | None = None) -> Flask:
     """
     Cria a aplicação Flask.
@@ -63,10 +78,11 @@ def create_app(test_config: dict[str, Any] | None = None) -> Flask:
 
     app = Flask(__name__)
 
-    # SECRET_KEY não assina nada sensível hoje (auth usa token opaco salvo
-    # no banco, não sessão de cookie assinada), mas fica configurável via
-    # env var em vez de hardcoded no código-fonte.
+    # SECRET_KEY não assina nada sensível hoje (auth usa token opaco com o
+    # hash salvo no banco, não sessão de cookie assinada), mas fica
+    # configurável via env var em vez de hardcoded no código-fonte.
     app.config["SECRET_KEY"] = os.environ.get("LIBRAS_SECRET_KEY", "dev-only-change-me")
+    app.config["TOKEN_TTL_HOURS"] = _token_ttl_hours()
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
     # pool_pre_ping descarta conexões que o pooler do Supabase já fechou;
     # pool_recycle renova antes do timeout de inatividade do servidor.
@@ -91,7 +107,7 @@ def create_app(test_config: dict[str, Any] | None = None) -> Flask:
     # render_as_batch permite ALTER TABLE também no fallback SQLite.
     migrate.init_app(app, db, directory=str(PROJECT_ROOT / "migrations"), render_as_batch=True)
 
-    from libras.api import models  # noqa: F401 — registra o model User no metadata
+    from libras.api import models  # noqa: F401 — registra os models no metadata
 
     db_url = make_url(app.config["SQLALCHEMY_DATABASE_URI"])
     print(f"Banco de dados: {db_url.render_as_string(hide_password=True)}")

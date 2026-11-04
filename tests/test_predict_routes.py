@@ -22,6 +22,12 @@ FIXTURE = Path(__file__).parent / "fixtures" / "predict_sequence.json"
 
 
 @pytest.fixture
+def client(auth_client):
+    """As rotas de predição exigem token; os casos sem token estão em test_auth.py."""
+    return auth_client
+
+
+@pytest.fixture
 def payload():
     return json.loads(FIXTURE.read_text(encoding="utf-8"))
 

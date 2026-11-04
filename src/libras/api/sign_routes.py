@@ -14,6 +14,7 @@ import numpy as np
 from flask import Blueprint, jsonify, request
 from tensorflow.keras.models import load_model
 
+from libras.api.auth import login_required
 from libras.api.payloads import NoLandmarksError, PayloadError, parse_sequence_payload
 from libras.config import PATHS
 from libras.features.keypoints import FeatureBuilder, get_feature_builder, normalize_sequence
@@ -72,6 +73,7 @@ except Exception as e:
 
 
 @sign_bp.route("/predict_sequence", methods=["POST"])
+@login_required
 def predict_sequence():
     if _sign is None:
         return jsonify({"error": "Modelo LSTM nao carregado."}), 503

@@ -98,6 +98,11 @@ dos payloads está em [`docs/API_CONTRACT.md`](docs/API_CONTRACT.md). A rota
 de coleta `/record_data`, que grava imagens em disco e usa MediaPipe no
 servidor, só é registrada com `LIBRAS_ENABLE_RECORD_DATA=1`.
 
+**Autenticação.** Essas três rotas exigem `Authorization: Bearer <token>`, com o
+token devolvido por `POST /login`. Cada login cria uma sessão própria na tabela
+`user_session`, que guarda só o hash SHA-256 do token. A validade vem de
+`LIBRAS_TOKEN_TTL_HOURS` (padrão: 168 h), e `POST /logout` encerra só a sessão atual.
+
 **Observações sobre o Supabase**
 
 - Use a connection string do **Session pooler**: host `*.pooler.supabase.com`,
@@ -120,12 +125,20 @@ remove `jax` e `jaxlib`, que a API não usa, então o `pip check` na imagem acus
 docker build -t librakids-api .
 docker run --rm -p 8080:8080 --env-file .env librakids-api
 curl http://localhost:8080/health
+```
+
+O `/health` deve mostrar `lstm_loaded: true` e `letter_loaded: true`. Para chamar a
+predição, entre com uma conta existente e envie o `access_token` devolvido:
+
+```bash
+curl -X POST http://localhost:8080/login -H "Content-Type: application/json" \
+  -d '{"username": "<usuario>", "password": "<senha>"}'
 curl -X POST http://localhost:8080/predict_sequence \
+  -H "Authorization: Bearer <access_token>" \
   -H "Content-Type: application/json" --data-binary @tests/fixtures/predict_sequence.json
 ```
 
-No Windows, use `curl.exe` no PowerShell. O `/health` deve mostrar
-`lstm_loaded: true` e `letter_loaded: true`.
+No Windows, use `curl.exe` no PowerShell.
 
 **Variáveis de ambiente**
 
@@ -134,6 +147,7 @@ No Windows, use `curl.exe` no PowerShell. O `/health` deve mostrar
 | `DATABASE_URL` | nenhum (obrigatória) | Banco PostgreSQL. Sem ela, o container não sobe: o fallback SQLite precisa criar `/app/instance`, e o usuário não-root não tem permissão. |
 | `PORT` | `8080` | Porta do gunicorn e do `HEALTHCHECK`. |
 | `WEB_CONCURRENCY` | `1` | Número de workers. Cada um carrega o TensorFlow e os dois modelos na memória. |
+| `LIBRAS_TOKEN_TTL_HOURS` | `168` | Validade do token de login, em horas. Precisa ser um inteiro positivo; com outro valor, a API não sobe. |
 
 O `--env-file` não remove aspas: escreva a `DATABASE_URL` no `.env` sem elas.
 

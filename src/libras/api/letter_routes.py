@@ -22,6 +22,7 @@ from flask import Blueprint, jsonify, request
 from tensorflow.keras.layers import InputLayer as _InputLayer
 from tensorflow.keras.models import load_model as keras_load_model
 
+from libras.api.auth import login_required
 from libras.api.payloads import PayloadError, parse_letter_payload
 from libras.config import PATHS
 
@@ -124,6 +125,7 @@ def _hand_box(hand: np.ndarray) -> list[float]:
 
 
 @letter_bp.route("/predict_letter_landmarks", methods=["POST"])
+@login_required
 def predict_letter_landmarks():
     if _letter_model is None:
         return jsonify({"success": False, "message": "Modelo de letras nao carregado."}), 503
