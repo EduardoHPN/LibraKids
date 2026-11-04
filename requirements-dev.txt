@@ -1,0 +1,2 @@
+# Testes. Combine com requirements.txt (API) ou requirements-train.txt (tudo).
+pytest==8.3.3

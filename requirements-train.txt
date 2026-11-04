@@ -1,0 +1,10 @@
+# Treino, notebooks e dataset. Inclui o runtime da API.
+-r requirements.txt
+
+mediapipe==0.10.9
+opencv-python==4.8.1.78
+matplotlib==3.7.5
+seaborn==0.13.2
+pandas==2.3.3
+tqdm==4.66.4
+kagglehub==0.2.9

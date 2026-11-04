@@ -3,7 +3,9 @@
 import numpy as np
 import pytest
 
-from libras.utils.mediapipe_holistic import (
+pytest.importorskip("mediapipe")
+
+from libras.utils.mediapipe_holistic import (  # noqa: E402
     REGION_SLICES, TOTAL_DIM, normalize_sequence, normalize_spatial, parse_class_name,
 )
 
